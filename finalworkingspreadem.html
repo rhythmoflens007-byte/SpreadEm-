@@ -1,0 +1,2156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SpreadEm — Pay Per Spread, Not Per Post</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;0,700;1,300;1,400;1,600;1,700&family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300;1,9..40,400&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+<!-- TODO: <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script> -->
+<!-- TODO: <script src="https://checkout.razorpay.com/v1/checkout.js"></script> -->
+<style>
+:root {
+  --void:#040408;--ink:#08080F;--surface:#0E0E1A;--elevated:#151524;
+  --border:rgba(255,255,255,0.055);--glass:rgba(255,255,255,0.025);
+  --gold:#C9A84C;--gold-b:#E8C965;--gold-d:rgba(201,168,76,0.18);--gold-glow:rgba(201,168,76,0.28);
+  --vermillion:#D9441A;--aqua:#00D4C8;--emerald:#0EC97A;
+  --cream:#EDE8E3;--warm:#9A968F;--muted:#4A4850;--ghost:#1C1C28;
+  --success:#0EC97A;--warn:#E8A72A;--err:#E8382A;--wa:#25D366;
+  --fd:'Cormorant Garamond',Georgia,serif;
+  --fh:'Syne',sans-serif;--fb:'DM Sans',sans-serif;
+  --ease:cubic-bezier(0.25,0.46,0.45,0.94);
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+html{scroll-behavior:smooth;}
+body{background:var(--void);color:var(--cream);font-family:var(--fb);font-size:16px;line-height:1.7;overflow-x:hidden;cursor:none;}
+::selection{background:var(--gold-d);color:var(--gold-b);}
+::-webkit-scrollbar{width:4px;}
+::-webkit-scrollbar-track{background:var(--ink);}
+::-webkit-scrollbar-thumb{background:var(--gold-d);border-radius:99px;}
+::-webkit-scrollbar-thumb:hover{background:var(--gold);}
+
+/* CURSOR */
+#cursor{position:fixed;width:10px;height:10px;border-radius:50%;background:var(--gold);pointer-events:none;z-index:99999;transform:translate(-50%,-50%);transition:transform .15s var(--ease),opacity .15s,width .25s,height .25s,background .2s;mix-blend-mode:difference;}
+#cursor-ring{position:fixed;width:36px;height:36px;border-radius:50%;border:1px solid rgba(201,168,76,0.45);pointer-events:none;z-index:99998;transform:translate(-50%,-50%);transition:transform .35s var(--ease),opacity .35s,width .35s,height .35s;}
+body:hover #cursor{opacity:1;}
+
+/* GRAIN */
+body::before{content:'';position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");opacity:0.028;pointer-events:none;z-index:9999;animation:grain 0.8s steps(1) infinite;}
+@keyframes grain{0%,100%{transform:translate(0,0)}10%{transform:translate(-2%,-3%)}20%{transform:translate(3%,1%)}30%{transform:translate(-1%,4%)}40%{transform:translate(2%,-2%)}50%{transform:translate(-3%,2%)}60%{transform:translate(1%,-1%)}70%{transform:translate(-2%,3%)}80%{transform:translate(3%,-3%)}90%{transform:translate(-1%,2%)}}
+
+/* CANVAS PARTICLES */
+#particles-canvas{position:fixed;inset:0;pointer-events:none;z-index:0;opacity:.55;}
+
+/* SECTIONS */
+.page-section{display:none;min-height:100vh;position:relative;z-index:1;}
+.page-section.active{display:block;}
+
+/* ── TYPOGRAPHY ── */
+.t-display{font-family:var(--fd);font-weight:700;font-size:clamp(52px,8vw,96px);letter-spacing:-0.02em;line-height:1.0;}
+.t-h1{font-family:var(--fd);font-weight:600;font-size:clamp(36px,5vw,64px);letter-spacing:-0.02em;line-height:1.05;}
+.t-h2{font-family:var(--fh);font-weight:700;font-size:clamp(26px,3.5vw,42px);letter-spacing:-0.03em;line-height:1.15;}
+.t-h3{font-family:var(--fh);font-weight:600;font-size:clamp(18px,2.5vw,26px);letter-spacing:-0.02em;}
+.t-h4{font-family:var(--fh);font-weight:600;font-size:18px;letter-spacing:-0.01em;}
+.t-body{font-family:var(--fb);font-size:16px;line-height:1.75;color:var(--warm);}
+.t-small{font-family:var(--fb);font-size:14px;color:var(--warm);}
+.t-micro{font-family:var(--fh);font-size:11px;font-weight:500;letter-spacing:0.14em;text-transform:uppercase;color:var(--muted);}
+.t-gold{color:var(--gold);}
+.t-cream{color:var(--cream);}
+.t-warm{color:var(--warm);}
+.t-muted{color:var(--muted);}
+.t-italic{font-style:italic;}
+.grad-gold{background:linear-gradient(135deg,var(--gold-b),var(--gold));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+
+/* ── LAYOUT ── */
+.container{max-width:1200px;margin:0 auto;padding:0 32px;}
+.section-pad{padding:120px 0;}
+@media(max-width:768px){.section-pad{padding:72px 0;}.container{padding:0 20px;}}
+.flex-center{display:flex;align-items:center;justify-content:center;}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:32px;}
+.grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;}
+.grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:20px;}
+@media(max-width:960px){.grid-3{grid-template-columns:1fr 1fr;}.grid-4{grid-template-columns:1fr 1fr;}}
+@media(max-width:640px){.grid-2,.grid-3,.grid-4{grid-template-columns:1fr;}}
+
+/* ── GLASS CARD ── */
+.glass-card{background:var(--glass);border:1px solid var(--border);border-radius:20px;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);transition:transform .28s var(--ease),box-shadow .28s var(--ease),border-color .28s;}
+.glass-card:hover{transform:translateY(-5px);box-shadow:0 0 48px var(--gold-d);border-color:rgba(201,168,76,0.15);}
+
+/* ── BUTTONS ── */
+.btn{display:inline-flex;align-items:center;gap:8px;padding:14px 28px;border-radius:14px;font-family:var(--fh);font-weight:600;font-size:15px;letter-spacing:-0.01em;cursor:none;border:none;transition:transform .2s var(--ease),box-shadow .2s var(--ease),filter .2s;text-decoration:none;}
+.btn-primary{background:linear-gradient(135deg,var(--gold-b),var(--gold));color:#09090A;}
+.btn-primary:hover{transform:scale(1.03);box-shadow:0 0 32px var(--gold-glow);filter:brightness(1.08);}
+.btn-ghost{background:transparent;color:var(--cream);border:1px solid var(--border);}
+.btn-ghost:hover{border-color:rgba(201,168,76,0.4);color:var(--gold);}
+.btn-outline-gold{background:transparent;color:var(--gold);border:1px solid rgba(201,168,76,0.4);}
+.btn-outline-gold:hover{background:var(--gold-d);border-color:var(--gold);}
+.btn-danger{background:rgba(232,56,42,0.15);color:var(--err);border:1px solid rgba(232,56,42,0.25);}
+.btn-danger:hover{background:rgba(232,56,42,0.25);}
+.btn-success{background:rgba(14,201,122,0.15);color:var(--success);border:1px solid rgba(14,201,122,0.25);}
+.btn-success:hover{background:rgba(14,201,122,0.25);}
+.btn-sm{padding:8px 18px;font-size:13px;border-radius:10px;}
+.btn-lg{padding:18px 40px;font-size:17px;}
+.btn-full{width:100%;justify-content:center;}
+
+/* ── PILL / BADGE ── */
+.pill{display:inline-flex;align-items:center;gap:6px;padding:5px 14px;border-radius:999px;font-family:var(--fh);font-size:12px;font-weight:600;letter-spacing:0.03em;}
+.pill-gold{background:rgba(201,168,76,0.12);color:var(--gold);border:1px solid rgba(201,168,76,0.2);}
+.pill-gray{background:rgba(255,255,255,0.06);color:var(--warm);}
+.pill-yellow{background:rgba(232,167,42,0.12);color:var(--warn);}
+.pill-green{background:rgba(14,201,122,0.12);color:var(--success);}
+.pill-blue{background:rgba(0,212,200,0.12);color:var(--aqua);}
+.pill-red{background:rgba(232,56,42,0.12);color:var(--err);}
+.pill-orange{background:rgba(217,68,26,0.12);color:var(--vermillion);}
+.pill-wa{background:rgba(37,211,102,0.1);color:var(--wa);}
+.pulse-dot::before{content:'';display:inline-block;width:7px;height:7px;border-radius:50%;background:currentColor;margin-right:5px;animation:pulsedot 1.5s ease infinite;}
+@keyframes pulsedot{0%,100%{opacity:1;transform:scale(1);}50%{opacity:.5;transform:scale(.8);}}
+
+/* ── NAV ── */
+#main-nav{position:fixed;top:0;left:0;right:0;z-index:1000;transition:background .3s,backdrop-filter .3s,border-color .3s;border-bottom:1px solid transparent;}
+#main-nav.scrolled{background:rgba(4,4,8,0.88);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-color:var(--border);}
+.nav-inner{height:68px;display:flex;align-items:center;justify-content:space-between;max-width:1200px;margin:0 auto;padding:0 32px;}
+.nav-logo{font-family:var(--fd);font-size:26px;font-weight:700;color:var(--cream);letter-spacing:-0.02em;cursor:none;text-decoration:none;}
+.nav-logo span{color:var(--gold);}
+.nav-links{display:flex;align-items:center;gap:36px;}
+.nav-links a{font-family:var(--fh);font-size:14px;font-weight:500;color:var(--warm);text-decoration:none;transition:color .2s;cursor:none;letter-spacing:0.01em;}
+.nav-links a:hover{color:var(--cream);}
+.nav-right{display:flex;align-items:center;gap:12px;}
+#hamburger{display:none;background:none;border:none;cursor:none;padding:8px;}
+@media(max-width:768px){.nav-links{display:none;}.nav-right .btn-ghost{display:none;}#hamburger{display:block;}}
+#mobile-menu{position:fixed;inset:0;background:rgba(4,4,8,0.98);backdrop-filter:blur(20px);z-index:999;display:none;flex-direction:column;align-items:center;justify-content:center;gap:40px;}
+#mobile-menu.open{display:flex;}
+#mobile-menu a{font-family:var(--fd);font-size:36px;font-weight:600;color:var(--cream);text-decoration:none;letter-spacing:-0.02em;transition:color .2s;}
+#mobile-menu a:hover{color:var(--gold);}
+#mobile-menu-close{position:absolute;top:24px;right:24px;background:none;border:none;cursor:none;}
+
+/* ── ADMIN LAYOUT ── */
+.admin-layout{display:flex;min-height:100vh;}
+.admin-sidebar{width:240px;background:var(--ink);border-right:1px solid var(--border);position:fixed;top:0;left:0;bottom:0;z-index:500;display:flex;flex-direction:column;padding:24px 0;}
+.admin-logo{padding:0 24px 24px;border-bottom:1px solid var(--border);margin-bottom:16px;}
+.admin-logo p{font-family:var(--fh);font-size:11px;font-weight:500;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);margin-top:4px;}
+.sidebar-nav-item{display:flex;align-items:center;gap:12px;padding:11px 24px;cursor:none;transition:background .2s,color .2s,border-color .2s;border-left:2px solid transparent;font-family:var(--fh);font-size:14px;font-weight:500;color:var(--warm);}
+.sidebar-nav-item:hover,.sidebar-nav-item.active{background:rgba(201,168,76,0.06);color:var(--cream);border-left-color:var(--gold);}
+.sidebar-nav-item.active{color:var(--gold);}
+.admin-main{margin-left:240px;flex:1;padding:32px;}
+@media(max-width:960px){.admin-sidebar{display:none;}.admin-main{margin-left:0;}}
+
+/* ── DASHBOARD NAV ── */
+.dash-nav{position:sticky;top:0;z-index:100;background:rgba(4,4,8,0.9);backdrop-filter:blur(16px);border-bottom:1px solid var(--border);height:64px;display:flex;align-items:center;justify-content:space-between;padding:0 32px;}
+.dash-nav .nav-logo{font-size:22px;}
+.avatar-btn{width:36px;height:36px;border-radius:50%;background:var(--gold-d);border:1px solid rgba(201,168,76,0.3);display:flex;align-items:center;justify-content:center;cursor:none;font-family:var(--fh);font-size:14px;font-weight:700;color:var(--gold);}
+.dropdown{position:relative;}
+.dropdown-menu{position:absolute;top:calc(100% + 10px);right:0;background:var(--elevated);border:1px solid var(--border);border-radius:14px;min-width:180px;padding:8px;z-index:200;display:none;box-shadow:0 20px 60px rgba(0,0,0,0.5);}
+.dropdown-menu.open{display:block;}
+.dropdown-item{display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:10px;font-size:14px;font-family:var(--fh);color:var(--warm);cursor:none;transition:background .2s,color .2s;}
+.dropdown-item:hover{background:var(--glass);color:var(--cream);}
+
+/* ── FORM ELEMENTS ── */
+.form-group{margin-bottom:20px;position:relative;}
+.form-label{display:block;font-family:var(--fh);font-size:12px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted);margin-bottom:8px;}
+.form-input,.form-select,.form-textarea{width:100%;background:var(--elevated);border:1px solid var(--border);border-radius:12px;padding:14px 16px;font-family:var(--fb);font-size:15px;color:var(--cream);outline:none;transition:border-color .2s,box-shadow .2s;-webkit-appearance:none;}
+.form-input:focus,.form-select:focus,.form-textarea:focus{border-color:rgba(201,168,76,0.5);box-shadow:0 0 0 3px rgba(201,168,76,0.1);}
+.form-input.error,.form-select.error{border-color:rgba(232,56,42,0.6);}
+.form-input::placeholder{color:var(--muted);}
+.form-select option{background:var(--elevated);}
+.form-textarea{resize:vertical;min-height:120px;line-height:1.6;}
+.input-prefix{display:flex;align-items:center;background:var(--elevated);border:1px solid var(--border);border-radius:12px;overflow:hidden;}
+.input-prefix span{padding:14px 14px;font-family:var(--fh);font-size:14px;color:var(--muted);border-right:1px solid var(--border);white-space:nowrap;}
+.input-prefix input{flex:1;background:transparent;border:none;padding:14px 14px;font-family:var(--fb);font-size:15px;color:var(--cream);outline:none;}
+.input-prefix:focus-within{border-color:rgba(201,168,76,0.5);box-shadow:0 0 0 3px rgba(201,168,76,0.1);}
+.char-count{position:absolute;right:14px;bottom:12px;font-size:12px;color:var(--muted);}
+.form-error{font-size:12px;color:var(--err);margin-top:5px;display:none;}
+.form-error.show{display:block;}
+.form-note{font-size:13px;color:var(--muted);margin-top:8px;line-height:1.5;}
+
+/* CHIP SELECT */
+.chip-grid{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;}
+.chip{display:inline-flex;align-items:center;padding:8px 16px;border-radius:999px;font-family:var(--fh);font-size:13px;font-weight:500;border:1px solid var(--border);color:var(--warm);cursor:none;transition:all .2s;background:var(--glass);}
+.chip:hover{border-color:rgba(201,168,76,0.35);color:var(--cream);}
+.chip.selected{background:var(--gold-d);border-color:rgba(201,168,76,0.4);color:var(--gold);}
+
+/* OTP INPUTS */
+.otp-grid{display:flex;gap:10px;justify-content:center;}
+.otp-input{width:50px;height:60px;text-align:center;font-family:var(--fd);font-size:26px;font-weight:600;background:var(--elevated);border:1px solid var(--border);border-radius:14px;color:var(--cream);outline:none;transition:border-color .2s,box-shadow .2s;}
+.otp-input:focus{border-color:var(--gold);box-shadow:0 0 0 3px rgba(201,168,76,0.12);}
+
+/* CHECKBOX */
+.check-row{display:flex;align-items:flex-start;gap:12px;cursor:none;}
+.custom-check{width:18px;height:18px;min-width:18px;border:1px solid var(--border);border-radius:5px;background:var(--elevated);display:flex;align-items:center;justify-content:center;transition:all .2s;cursor:none;}
+.custom-check.checked{background:var(--gold);border-color:var(--gold);}
+.custom-check svg{display:none;width:11px;height:11px;color:#09090A;}
+.custom-check.checked svg{display:block;}
+.check-label{font-size:14px;color:var(--warm);line-height:1.6;}
+.check-label a{color:var(--gold);text-decoration:none;}
+
+/* ── PROGRESS STEPS ── */
+.steps-bar{display:flex;align-items:center;gap:0;margin-bottom:40px;}
+.step-item{display:flex;align-items:center;gap:0;flex:1;}
+.step-circle{width:32px;height:32px;min-width:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:var(--fh);font-size:13px;font-weight:700;transition:all .3s;}
+.step-circle.done{background:var(--gold);color:#09090A;}
+.step-circle.active{background:var(--gold-d);border:2px solid var(--gold);color:var(--gold);}
+.step-circle.pending{background:var(--ghost);border:1px solid var(--border);color:var(--muted);}
+.step-line{flex:1;height:1px;background:var(--border);transition:background .3s;}
+.step-line.done{background:var(--gold);}
+.step-label{font-family:var(--fh);font-size:11px;font-weight:500;letter-spacing:0.06em;text-transform:uppercase;margin-top:6px;color:var(--muted);text-align:center;}
+.step-label.active{color:var(--gold);}
+
+/* ── TIMELINE ── */
+.timeline{position:relative;padding-left:36px;}
+.timeline::before{content:'';position:absolute;left:11px;top:0;bottom:0;width:1px;background:var(--border);}
+.timeline-item{position:relative;margin-bottom:28px;}
+.timeline-dot{position:absolute;left:-36px;top:3px;width:22px;height:22px;border-radius:50%;background:var(--surface);border:1.5px solid var(--border);display:flex;align-items:center;justify-content:center;font-family:var(--fh);font-size:10px;font-weight:700;color:var(--muted);transition:all .3s;}
+.timeline-dot.active{background:var(--gold-d);border-color:var(--gold);color:var(--gold);}
+.timeline-dot.done{background:var(--gold);border-color:var(--gold);color:#09090A;}
+.timeline-item h4{font-family:var(--fh);font-size:15px;font-weight:600;color:var(--cream);margin-bottom:4px;}
+.timeline-item p{font-size:13px;color:var(--warm);line-height:1.6;}
+
+/* ── DATA TABLE ── */
+.data-table{width:100%;border-collapse:collapse;}
+.data-table th{font-family:var(--fh);font-size:11px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted);padding:12px 16px;text-align:left;border-bottom:1px solid var(--border);}
+.data-table td{padding:14px 16px;border-bottom:1px solid rgba(255,255,255,0.03);font-size:14px;color:var(--warm);vertical-align:middle;}
+.data-table tr:hover td{background:rgba(201,168,76,0.03);}
+.data-table tr:last-child td{border-bottom:none;}
+.table-scroll{overflow-x:auto;border-radius:16px;border:1px solid var(--border);}
+
+/* ── PROGRESS BAR ── */
+.prog-bar{height:4px;background:var(--ghost);border-radius:99px;overflow:hidden;}
+.prog-fill{height:100%;border-radius:99px;background:linear-gradient(90deg,var(--gold),var(--gold-b));position:relative;}
+.prog-fill::after{content:'';position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,0.3),transparent);animation:shimmer 2s infinite;}
+@keyframes shimmer{0%{transform:translateX(-100%);}100%{transform:translateX(100%);}}
+
+/* ── TABS ── */
+.tab-bar{display:flex;gap:4px;padding:4px;background:var(--surface);border-radius:14px;border:1px solid var(--border);width:fit-content;margin-bottom:28px;}
+.tab-btn{padding:9px 20px;border-radius:10px;font-family:var(--fh);font-size:13px;font-weight:600;cursor:none;border:none;background:transparent;color:var(--muted);transition:all .22s;}
+.tab-btn.active{background:var(--elevated);color:var(--cream);box-shadow:0 2px 8px rgba(0,0,0,0.3);}
+.tab-content{display:none;}
+.tab-content.active{display:block;}
+
+/* ── STATS CARD ── */
+.stat-card{padding:28px;border-radius:20px;background:var(--surface);border:1px solid var(--border);}
+.stat-num{font-family:var(--fd);font-size:44px;font-weight:700;letter-spacing:-0.02em;line-height:1;}
+.stat-label{font-family:var(--fh);font-size:12px;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted);margin-top:8px;}
+.stat-card .pill{margin-top:12px;}
+
+/* ── CAMPAIGN CARD ── */
+.campaign-card{background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:22px;transition:all .25s;cursor:none;}
+.campaign-card:hover{border-color:rgba(201,168,76,0.15);box-shadow:0 0 30px var(--gold-d);}
+
+/* ── TOAST ── */
+#toast-container{position:fixed;bottom:24px;right:24px;z-index:9999;display:flex;flex-direction:column;gap:10px;pointer-events:none;}
+.toast{display:flex;align-items:center;gap:12px;padding:14px 20px;border-radius:14px;background:rgba(14,14,26,0.95);backdrop-filter:blur(20px);border:1px solid var(--border);min-width:280px;max-width:360px;pointer-events:all;animation:slideInToast .3s var(--ease);}
+@keyframes slideInToast{from{transform:translateX(110%);opacity:0;}to{transform:translateX(0);opacity:1;}}
+.toast.fadeout{animation:fadeOutToast .3s var(--ease) forwards;}
+@keyframes fadeOutToast{to{transform:translateX(110%);opacity:0;}}
+.toast-icon{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.toast.success .toast-icon{background:rgba(14,201,122,0.15);color:var(--success);}
+.toast.error .toast-icon{background:rgba(232,56,42,0.15);color:var(--err);}
+.toast.info .toast-icon{background:rgba(0,212,200,0.15);color:var(--aqua);}
+.toast p{font-family:var(--fh);font-size:13px;font-weight:500;color:var(--cream);flex:1;}
+
+/* ── MODAL ── */
+#modal-overlay{position:fixed;inset:0;background:rgba(2,2,9,0.85);backdrop-filter:blur(8px);z-index:9990;display:none;align-items:center;justify-content:center;padding:20px;}
+#modal-overlay.open{display:flex;}
+#modal-box{background:var(--elevated);border:1px solid var(--border);border-radius:24px;max-width:560px;width:100%;max-height:80vh;overflow-y:auto;padding:36px;position:relative;animation:modalIn .3s var(--ease);}
+@keyframes modalIn{from{transform:translateY(20px) scale(0.97);opacity:0;}to{transform:translateY(0) scale(1);opacity:1;}}
+#modal-close{position:absolute;top:16px;right:16px;background:var(--ghost);border:none;border-radius:50%;width:32px;height:32px;display:flex;align-items:center;justify-content:center;cursor:none;color:var(--warm);transition:color .2s,background .2s;}
+#modal-close:hover{background:var(--border);color:var(--cream);}
+
+/* ── ACCORDION (FAQ) ── */
+.accordion-item{border-bottom:1px solid var(--border);}
+.accordion-trigger{width:100%;display:flex;align-items:center;justify-content:space-between;padding:20px 0;cursor:none;background:none;border:none;text-align:left;font-family:var(--fh);font-size:16px;font-weight:600;color:var(--cream);transition:color .2s;}
+.accordion-trigger:hover{color:var(--gold);}
+.accordion-trigger .arrow{transition:transform .25s var(--ease);flex-shrink:0;color:var(--muted);}
+.accordion-trigger.open .arrow{transform:rotate(45deg);color:var(--gold);}
+.accordion-body{max-height:0;overflow:hidden;transition:max-height .35s var(--ease);font-size:15px;color:var(--warm);line-height:1.7;}
+.accordion-body.open{max-height:200px;}
+.accordion-body-inner{padding-bottom:20px;}
+
+/* ── HERO ANIMATIONS ── */
+@keyframes fadeUp{from{opacity:0;transform:translateY(30px);}to{opacity:1;transform:translateY(0);}}
+@keyframes fadeIn{from{opacity:0;}to{opacity:1;}}
+@keyframes floatY{0%,100%{transform:translateY(0);}50%{transform:translateY(-10px);}}
+@keyframes rotateSlow{from{transform:rotate(0deg);}to{transform:rotate(360deg);}}
+@keyframes signalPulse{0%,100%{transform:scaleX(1);opacity:1;}50%{transform:scaleX(1.04);opacity:.7;}}
+@keyframes scrollBounce{0%,100%{transform:translateY(0);}50%{transform:translateY(6px);}}
+@keyframes gradientShift{0%,100%{background-position:0% 50%;}50%{background-position:100% 50%;}}
+@keyframes blobFloat{0%,100%{transform:scale(1) translate(0,0) rotate(0deg);}33%{transform:scale(1.08) translate(20px,-20px) rotate(5deg);}66%{transform:scale(0.94) translate(-15px,15px) rotate(-3deg);}}
+
+/* REVEAL ANIMATION */
+.reveal{opacity:0;transform:translateY(28px);transition:opacity .7s var(--ease),transform .7s var(--ease);}
+.reveal.visible{opacity:1;transform:translateY(0);}
+.reveal-delay-1{transition-delay:.1s;}.reveal-delay-2{transition-delay:.2s;}.reveal-delay-3{transition-delay:.3s;}.reveal-delay-4{transition-delay:.4s;}
+
+/* ── HERO BLOBS ── */
+.blob{position:absolute;border-radius:50%;filter:blur(90px);opacity:0.12;pointer-events:none;}
+
+/* ── QUOTE CAROUSEL ── */
+#quotes-section{overflow:hidden;}
+.quote-carousel{position:relative;}
+.quote-slide{display:none;animation:fadeIn .5s var(--ease);}
+.quote-slide.active{display:block;}
+.quote-display-text{font-family:var(--fd);font-size:clamp(28px,4.5vw,58px);font-weight:600;line-height:1.12;letter-spacing:-0.02em;color:var(--cream);}
+.quote-giant-mark{font-family:var(--fd);font-size:200px;line-height:0.6;color:var(--gold-d);font-weight:700;pointer-events:none;user-select:none;}
+.quote-attribution{font-family:var(--fh);font-size:13px;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted);margin-top:24px;}
+.quote-progress{height:2px;background:var(--ghost);border-radius:99px;overflow:hidden;margin-top:36px;}
+.quote-fill{height:100%;background:var(--gold);border-radius:99px;transition:width linear;}
+.quote-dots{display:flex;gap:6px;justify-content:center;margin-top:20px;flex-wrap:wrap;}
+.qdot{width:6px;height:6px;border-radius:50%;background:var(--ghost);border:1px solid var(--border);transition:all .3s;cursor:none;}
+.qdot.active{width:20px;background:var(--gold);}
+.quote-counter{font-family:var(--fh);font-size:13px;color:var(--muted);font-weight:500;}
+
+/* ── FILE DROP ZONE ── */
+.drop-zone{border:1.5px dashed rgba(201,168,76,0.2);border-radius:16px;padding:40px;text-align:center;cursor:none;transition:all .25s;}
+.drop-zone:hover,.drop-zone.drag-over{border-color:rgba(201,168,76,0.5);background:var(--gold-d);}
+
+/* ── EARNINGS CARD ── */
+.earnings-card{background:linear-gradient(135deg,rgba(201,168,76,0.06),rgba(201,168,76,0.02));border:1px solid rgba(201,168,76,0.12);border-radius:20px;padding:28px;}
+
+/* ── BUDGET SLIDER ── */
+input[type=range]{-webkit-appearance:none;width:100%;height:4px;background:var(--ghost);border-radius:99px;outline:none;}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;border-radius:50%;background:var(--gold);cursor:none;transition:transform .2s;}
+input[type=range]::-webkit-slider-thumb:hover{transform:scale(1.2);}
+
+/* WA BADGE */
+.wa-badge{display:inline-flex;align-items:center;gap:7px;padding:6px 14px;border-radius:999px;background:rgba(37,211,102,0.08);border:1px solid rgba(37,211,102,0.2);font-family:var(--fh);font-size:12px;font-weight:600;color:var(--wa);}
+
+/* PAGE TRANSITION */
+.page-section{animation:fadeIn .35s var(--ease);}
+
+/* HERO SECTION SPECIFICS */
+#hero-canvas{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;}
+
+/* DIVIDER */
+.gold-divider{width:48px;height:2px;background:linear-gradient(90deg,var(--gold),transparent);margin:24px 0;}
+.full-divider{height:1px;background:var(--border);margin:60px 0;}
+
+/* SIGNAL LINE */
+.signal-line{height:2px;background:var(--ghost);border-radius:99px;overflow:hidden;position:relative;width:120px;}
+.signal-dot{position:absolute;top:0;left:-20%;width:20%;height:100%;background:linear-gradient(90deg,transparent,var(--gold),transparent);animation:signalTravel 2s linear infinite;}
+@keyframes signalTravel{from{left:-20%;}to{left:120%;}}
+
+/* SCROLL INDICATOR */
+.scroll-indicator{display:flex;flex-direction:column;align-items:center;gap:8px;opacity:.5;animation:scrollBounce 2s ease infinite;}
+.scroll-indicator span{font-family:var(--fh);font-size:11px;letter-spacing:0.12em;text-transform:uppercase;color:var(--warm);}
+
+/* NETWORK BG GRAPHIC */
+.net-graphic{position:absolute;inset:0;pointer-events:none;overflow:hidden;}
+
+/* STEP FORM NAV */
+.form-step{display:none;}
+.form-step.active{display:block;}
+
+/* CAMPAIGN STATUS FLOW */
+.flow-step{display:flex;flex-direction:column;align-items:center;gap:10px;flex:1;}
+.flow-icon{width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;}
+.flow-label{font-family:var(--fh);font-size:11px;font-weight:500;letter-spacing:0.06em;text-transform:uppercase;color:var(--muted);text-align:center;}
+.flow-connector{flex:1;height:1px;background:var(--border);margin-top:-22px;}
+
+/* ROLE PICKER */
+.role-card{border-radius:24px;border:1.5px solid var(--border);background:var(--glass);padding:44px 32px;text-align:center;cursor:none;transition:all .3s var(--ease);position:relative;overflow:hidden;}
+.role-card::before{content:'';position:absolute;inset:0;border-radius:22px;opacity:0;transition:opacity .3s;}
+.role-card.gold::before{background:radial-gradient(ellipse at 50% 0%,rgba(201,168,76,0.08),transparent 70%);}
+.role-card.vermillion::before{background:radial-gradient(ellipse at 50% 0%,rgba(217,68,26,0.08),transparent 70%);}
+.role-card:hover{transform:translateY(-6px);}
+.role-card.gold:hover{border-color:rgba(201,168,76,0.35);box-shadow:0 20px 60px rgba(201,168,76,0.12);}
+.role-card.gold:hover::before{opacity:1;}
+.role-card.vermillion:hover{border-color:rgba(217,68,26,0.35);box-shadow:0 20px 60px rgba(217,68,26,0.12);}
+.role-card.vermillion:hover::before{opacity:1;}
+.role-icon{width:72px;height:72px;border-radius:20px;display:flex;align-items:center;justify-content:center;margin:0 auto 24px;}
+.role-card.gold .role-icon{background:rgba(201,168,76,0.12);color:var(--gold);}
+.role-card.vermillion .role-icon{background:rgba(217,68,26,0.12);color:var(--vermillion);}
+
+/* LOGO HERO LETTER */
+.logo-huge{font-family:var(--fd);font-weight:700;letter-spacing:-0.04em;line-height:0.9;background:linear-gradient(160deg,var(--cream) 40%,rgba(201,168,76,0.55));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+
+/* FOR WHOM CARDS */
+.for-whom-card{border-radius:24px;padding:48px;position:relative;overflow:hidden;border:1px solid var(--border);}
+.for-whom-card.left-card{background:linear-gradient(135deg,rgba(201,168,76,0.06) 0%,transparent 60%);}
+.for-whom-card.right-card{background:linear-gradient(135deg,rgba(217,68,26,0.06) 0%,transparent 60%);}
+
+/* TRUST BAR */
+.avatar-stack{display:flex;}
+.avatar-stack .av{width:32px;height:32px;border-radius:50%;border:2px solid var(--ink);margin-left:-8px;first-child{margin-left:0};background:var(--ghost);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;}
+
+/* SPREADER CAMPAIGN CARD */
+.spreader-card{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:24px;transition:all .25s;position:relative;overflow:hidden;}
+.spreader-card:hover{border-color:rgba(201,168,76,0.15);box-shadow:0 0 36px rgba(201,168,76,0.06);}
+.spreader-card.urgent{border-left:3px solid var(--vermillion);}
+.payout-badge{background:linear-gradient(135deg,rgba(14,201,122,0.15),rgba(14,201,122,0.06));border:1px solid rgba(14,201,122,0.2);border-radius:12px;padding:10px 16px;text-align:center;}
+.payout-amount{font-family:var(--fd);font-size:28px;font-weight:700;color:var(--success);}
+
+/* ── ANIMATED COUNTER ── */
+.counter-num{font-family:var(--fd);font-size:clamp(40px,6vw,72px);font-weight:700;letter-spacing:-0.02em;}
+</style>
+</head>
+<body>
+
+<!-- CURSOR -->
+<div id="cursor"></div>
+<div id="cursor-ring"></div>
+
+<!-- CANVAS PARTICLES -->
+<canvas id="particles-canvas"></canvas>
+
+<!-- TOAST -->
+<div id="toast-container"></div>
+
+<!-- MODAL -->
+<div id="modal-overlay">
+  <div id="modal-box">
+    <button id="modal-close" onclick="closeModal()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+    <div id="modal-content"></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════ NAVIGATION ═══════════════════════════ -->
+<nav id="main-nav">
+  <div class="nav-inner">
+    <a href="#home" class="nav-logo" onclick="navigate('home')">Spread<span>Em</span></a>
+    <div class="nav-links" id="desktop-nav-links">
+      <a href="#" onclick="navigate('home');scrollToSection('how-it-works');return false;">How It Works</a>
+      <a href="#" onclick="navigate('for-clients');return false;">For Brands</a>
+      <a href="#" onclick="navigate('for-spreaders');return false;">For Spreaders</a>
+    </div>
+    <div class="nav-right">
+      <button class="btn btn-ghost btn-sm" onclick="navigate('login')">Login</button>
+      <button class="btn btn-primary btn-sm" onclick="navigate('signup')">Get Started</button>
+      <button id="hamburger" onclick="toggleMobileMenu()">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#F2EDE4" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+      </button>
+    </div>
+  </div>
+</nav>
+
+<!-- MOBILE MENU -->
+<div id="mobile-menu">
+  <button id="mobile-menu-close" onclick="toggleMobileMenu()">
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#F2EDE4" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+  </button>
+  <a href="#" onclick="navigate('home');toggleMobileMenu();return false;">Home</a>
+  <a href="#" onclick="navigate('for-clients');toggleMobileMenu();return false;">For Brands</a>
+  <a href="#" onclick="navigate('for-spreaders');toggleMobileMenu();return false;">For Spreaders</a>
+  <a href="#" onclick="navigate('login');toggleMobileMenu();return false;">Login</a>
+  <a href="#" onclick="navigate('signup');toggleMobileMenu();return false;" style="color:var(--gold)">Get Started →</a>
+</div>
+
+<!-- ═══════════════════════════ HOME PAGE ═══════════════════════════ -->
+<section id="s-home" class="page-section active">
+
+  <!-- HERO -->
+  <div style="min-height:100vh;position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;">
+    <!-- BG BLOBS -->
+    <div class="blob" style="width:700px;height:700px;background:#3D2F12;top:-200px;left:-200px;animation:blobFloat 18s ease-in-out infinite;"></div>
+    <div class="blob" style="width:500px;height:500px;background:#1A0D08;top:50%;right:-150px;animation:blobFloat 22s ease-in-out infinite reverse;"></div>
+    <div class="blob" style="width:400px;height:400px;background:#0A1A1A;bottom:-100px;left:30%;animation:blobFloat 15s ease-in-out infinite 3s;"></div>
+    
+    <canvas id="hero-canvas"></canvas>
+
+    <div class="container" style="text-align:center;position:relative;z-index:2;padding-top:120px;padding-bottom:80px;">
+      
+      <!-- Label pill -->
+      <div style="animation:fadeUp .6s var(--ease) forwards;opacity:0;" class="flex-center" style="margin-bottom:36px;">
+        <span class="pill pill-gold" style="margin-bottom:32px;">🇮🇳 Built for India's Creator Economy · Chennai 2026</span>
+      </div>
+
+      <!-- Main headline -->
+      <div style="animation:fadeUp .8s .15s var(--ease) forwards;opacity:0;margin-top:24px;">
+        <h1 class="logo-huge" style="font-size:clamp(48px,8.5vw,118px);">Content is king.</h1>
+        <h1 class="logo-huge grad-gold" style="font-size:clamp(48px,8.5vw,118px);margin-top:-0.06em;">Distribution is God.</h1>
+      </div>
+
+      <div style="animation:fadeUp .8s .3s var(--ease) forwards;opacity:0;max-width:620px;margin:32px auto 0;">
+        <p class="t-body" style="font-size:18px;color:var(--warm);">India's first meme-network distribution platform.<br>Brands pay per post. Spreaders earn per campaign. Zero guesswork.</p>
+      </div>
+
+      <div style="animation:fadeUp .8s .45s var(--ease) forwards;opacity:0;display:flex;gap:14px;justify-content:center;flex-wrap:wrap;margin-top:40px;">
+        <button class="btn btn-primary btn-lg" onclick="navigate('signup')">Launch a Campaign →</button>
+        <button class="btn btn-ghost btn-lg" onclick="navigate('signup')" style="border-color:rgba(201,168,76,0.3);color:var(--gold);">Earn as a Spreader</button>
+      </div>
+
+      <!-- Trust strip -->
+      <div style="animation:fadeUp .8s .6s var(--ease) forwards;opacity:0;margin-top:48px;display:flex;align-items:center;justify-content:center;gap:16px;flex-wrap:wrap;">
+        <div class="avatar-stack">
+          <div class="av" style="background:linear-gradient(135deg,#4A3010,#7A5018);">A</div>
+          <div class="av" style="background:linear-gradient(135deg,#10302A,#185040);">R</div>
+          <div class="av" style="background:linear-gradient(135deg,#2A1040,#441860);">K</div>
+          <div class="av" style="background:linear-gradient(135deg,#301020,#501838);">M</div>
+          <div class="av" style="background:linear-gradient(135deg,#103028,#185040);">S</div>
+        </div>
+        <span class="t-small" style="color:var(--muted);">Trusted by creators across Tamil Nadu, Maharashtra &amp; beyond</span>
+      </div>
+
+    </div>
+
+    <!-- Scroll indicator -->
+    <div class="scroll-indicator" style="position:absolute;bottom:36px;left:50%;transform:translateX(-50%);z-index:2;">
+      <span>Scroll</span>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12l7 7 7-7"/></svg>
+    </div>
+  </div>
+
+  <!-- HOW IT WORKS -->
+  <div id="how-it-works" class="section-pad" style="background:var(--ink);border-top:1px solid var(--border);border-bottom:1px solid var(--border);">
+    <div class="container">
+      <div style="text-align:center;margin-bottom:72px;" class="reveal">
+        <p class="t-micro" style="margin-bottom:16px;color:var(--gold);">The Process</p>
+        <h2 class="t-h2">Simple. Certain. Scalable.</h2>
+        <div class="signal-line" style="margin:20px auto 0;"></div>
+      </div>
+
+      <div class="grid-3 reveal">
+        <div class="glass-card" style="padding:36px;text-align:center;">
+          <div style="width:56px;height:56px;border-radius:16px;background:rgba(201,168,76,0.1);display:flex;align-items:center;justify-content:center;margin:0 auto 24px;color:var(--gold);">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
+          </div>
+          <div class="t-micro" style="color:var(--gold);margin-bottom:12px;">Step 01</div>
+          <h3 class="t-h3" style="margin-bottom:12px;">Submit Your Campaign</h3>
+          <p class="t-small">Brands submit content with brief, niche, target language, and budget. Our founder reviews every single one.</p>
+        </div>
+
+        <div class="glass-card" style="padding:36px;text-align:center;">
+          <div style="width:56px;height:56px;border-radius:16px;background:rgba(201,168,76,0.1);display:flex;align-items:center;justify-content:center;margin:0 auto 24px;color:var(--gold);">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 11a4 4 0 100-8 4 4 0 000 8zM23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
+          </div>
+          <div class="t-micro" style="color:var(--gold);margin-bottom:12px;">Step 02</div>
+          <h3 class="t-h3" style="margin-bottom:12px;">Spreaders Pick &amp; Post</h3>
+          <p class="t-small">Verified page owners browse the feed, pick campaigns aligned with their audience, and post in their own style.</p>
+        </div>
+
+        <div class="glass-card" style="padding:36px;text-align:center;">
+          <div style="width:56px;height:56px;border-radius:16px;background:rgba(201,168,76,0.1);display:flex;align-items:center;justify-content:center;margin:0 auto 24px;color:var(--gold);">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+          </div>
+          <div class="t-micro" style="color:var(--gold);margin-bottom:12px;">Step 03</div>
+          <h3 class="t-h3" style="margin-bottom:12px;">Pay Only for Real Posts</h3>
+          <p class="t-small">Every post is tracked and verified. Every payout is manually confirmed. Zero grey area.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- GOSPEL OF DISTRIBUTION -->
+  <div id="quotes-section" class="section-pad" style="position:relative;overflow:hidden;">
+    <div class="blob" style="width:600px;height:600px;background:#2A1F08;top:50%;left:50%;transform:translate(-50%,-50%);animation:blobFloat 20s ease-in-out infinite;opacity:0.08;"></div>
+    <div class="container" style="position:relative;z-index:1;">
+      <div class="reveal" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;margin-bottom:56px;">
+        <div>
+          <p class="t-micro" style="color:var(--gold);margin-bottom:12px;">The Gospel of Distribution</p>
+          <h2 class="t-h2">Words that move<br>the industry.</h2>
+        </div>
+        <span class="quote-counter" id="quote-counter">01 / 15</span>
+      </div>
+
+      <div class="quote-carousel reveal">
+        <div class="quote-slide active" data-quote="0">
+          <div style="position:relative;padding:56px 48px;background:var(--surface);border:1px solid rgba(201,168,76,0.1);border-radius:28px;overflow:hidden;">
+            <div class="quote-giant-mark" style="position:absolute;top:-30px;left:20px;">"</div>
+            <div style="position:relative;z-index:1;">
+              <p class="quote-display-text grad-gold" style="font-size:clamp(36px,6vw,78px);font-weight:700;">Content is king.<br>Distribution is God.</p>
+              <div class="gold-divider" style="margin-top:28px;"></div>
+              <p class="quote-attribution">SpreadEm Principle #1</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="quote-slide" data-quote="1">
+          <div style="padding:56px 48px;background:var(--surface);border:1px solid var(--border);border-radius:28px;">
+            <div class="quote-giant-mark" style="opacity:0.4;">"</div>
+            <p class="quote-display-text" style="margin-top:-40px;">It's not the best content that wins. It's the best-distributed content.</p>
+            <div class="gold-divider"></div>
+            <p class="quote-attribution">Andy Crestodina</p>
+          </div>
+        </div>
+
+        <div class="quote-slide" data-quote="2">
+          <div style="padding:56px 48px;background:var(--surface);border:1px solid var(--border);border-radius:28px;">
+            <div class="quote-giant-mark" style="opacity:0.4;">"</div>
+            <p class="quote-display-text" style="margin-top:-40px;">Content is king, but <span class="grad-gold" style="font-style:italic;">distribution is queen</span> — and she wears the pants.</p>
+            <div class="gold-divider"></div>
+            <p class="quote-attribution">Jonathan Perelman, BuzzFeed</p>
+          </div>
+        </div>
+
+        <div class="quote-slide" data-quote="3">
+          <div style="padding:56px 48px;background:var(--surface);border:1px solid rgba(201,168,76,0.08);border-radius:28px;position:relative;overflow:hidden;">
+            <div style="position:absolute;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 30px,rgba(201,168,76,0.02) 30px,rgba(201,168,76,0.02) 31px);pointer-events:none;"></div>
+            <p class="quote-display-text t-italic">A post without reach is a whisper in an empty room. SpreadEm turns it into a stadium announcement.</p>
+            <div class="gold-divider"></div>
+            <p class="quote-attribution">SpreadEm Manifesto</p>
+          </div>
+        </div>
+
+        <div class="quote-slide" data-quote="4">
+          <div style="padding:56px 48px;background:var(--surface);border:1px solid var(--border);border-radius:28px;">
+            <div class="quote-giant-mark" style="opacity:0.4;">"</div>
+            <p class="quote-display-text" style="margin-top:-40px;">The most powerful person in the world is the storyteller — but only if the story gets <span class="grad-gold">heard.</span></p>
+            <div class="gold-divider"></div>
+            <p class="quote-attribution">Inspired by Steve Jobs</p>
+          </div>
+        </div>
+
+        <div class="quote-slide" data-quote="5">
+          <div style="padding:56px 48px;background:var(--surface);border:1px solid var(--border);border-radius:28px;">
+            <p class="quote-display-text">Your brand spent <span style="color:var(--err);font-weight:700;">₹50,000</span> making the content.</p>
+            <p class="quote-display-text">It spent <span style="color:var(--success);font-weight:700;">₹0</span> distributing it.</p>
+            <p class="quote-display-text" style="color:var(--warm);font-style:italic;">That's why nobody saw it.</p>
+            <div class="gold-divider"></div>
+            <p class="quote-attribution">SpreadEm — The Hard Truth</p>
+          </div>
+        </div>
+
+        <div class="quote-slide" data-quote="6">
+          <div style="padding:56px 48px;background:var(--surface);border:1px solid var(--border);border-radius:28px;">
+            <div class="quote-giant-mark" style="opacity:0.4;">"</div>
+            <p class="quote-display-text" style="margin-top:-40px;">Build an audience, or buy one.<br><span style="color:var(--warm);">The brands that win do both.</span></p>
+            <div class="gold-divider"></div>
+            <p class="quote-attribution">Naval Ravikant, adapted</p>
+          </div>
+        </div>
+
+        <div class="quote-slide" data-quote="7">
+          <div style="padding:56px 48px;background:var(--surface);border:1px solid var(--border);border-radius:28px;text-align:center;position:relative;overflow:hidden;">
+            <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-family:var(--fd);font-size:220px;font-weight:800;color:rgba(201,168,76,0.04);line-height:1;pointer-events:none;white-space:nowrap;">1000</div>
+            <p class="quote-display-text" style="position:relative;z-index:1;">1000 spreaders posting once beats one influencer posting a hundred times.</p>
+            <div class="gold-divider" style="margin:28px auto;"></div>
+            <p class="quote-attribution">SpreadEm Distribution Theory</p>
+          </div>
+        </div>
+
+        <div class="quote-slide" data-quote="8">
+          <div style="padding:56px 48px;background:var(--surface);border:1px solid var(--border);border-radius:28px;">
+            <p class="quote-display-text" style="margin-bottom:8px;">Marketing is no longer about the stuff you make,</p>
+            <p class="quote-display-text" style="color:var(--warm);margin-bottom:8px;">but about the stories you tell —</p>
+            <p class="quote-display-text grad-gold">and where you tell them.</p>
+            <div class="gold-divider"></div>
+            <p class="quote-attribution">Seth Godin, adapted</p>
+          </div>
+        </div>
+
+        <div class="quote-slide" data-quote="9">
+          <div style="padding:56px 48px;background:linear-gradient(135deg,rgba(201,168,76,0.06),rgba(0,212,200,0.04));border:1px solid rgba(201,168,76,0.1);border-radius:28px;position:relative;overflow:hidden;">
+            <div style="position:absolute;bottom:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--gold),var(--aqua),transparent);"></div>
+            <p class="quote-display-text">In India, the meme page is the new <span class="grad-gold">prime-time TV.</span></p>
+            <p class="quote-display-text" style="color:var(--warm);margin-top:8px;">The spreader is the new broadcast tower.</p>
+            <div class="gold-divider"></div>
+            <p class="quote-attribution">SpreadEm — India Insight</p>
+          </div>
+        </div>
+
+        <div class="quote-slide" data-quote="10">
+          <div style="padding:56px 48px;background:var(--surface);border:1px solid var(--border);border-radius:28px;">
+            <div class="quote-giant-mark" style="opacity:0.4;">"</div>
+            <p class="quote-display-text" style="margin-top:-40px;">Create content that doesn't just exist — make it <span class="grad-gold">impossible to ignore.</span></p>
+            <div class="gold-divider"></div>
+            <p class="quote-attribution">Nick Thackray</p>
+          </div>
+        </div>
+
+        <div class="quote-slide" data-quote="11">
+          <div style="padding:56px 48px;background:var(--surface);border:1px solid var(--border);border-radius:28px;">
+            <p class="quote-display-text">Every meme page is an <span class="grad-gold">untapped media channel.</span></p>
+            <p class="quote-display-text" style="color:var(--warm);margin-top:8px;">We just built the network.</p>
+            <div class="gold-divider"></div>
+            <p class="quote-attribution">SpreadEm Founding Vision</p>
+          </div>
+        </div>
+
+        <div class="quote-slide" data-quote="12">
+          <div style="padding:56px 48px;background:var(--ink);border:1px solid var(--border);border-radius:28px;text-align:center;">
+            <p class="quote-display-text" style="font-size:clamp(40px,7vw,88px);font-weight:700;color:var(--cream);">Reach is vanity.</p>
+            <p class="quote-display-text" style="font-size:clamp(40px,7vw,88px);font-weight:700;" class="t-gold">Targeted reach<br>is strategy.</p>
+            <div class="gold-divider" style="margin:28px auto;"></div>
+            <p class="quote-attribution">SpreadEm Distribution Law</p>
+          </div>
+        </div>
+
+        <div class="quote-slide" data-quote="13">
+          <div style="padding:56px 48px;background:var(--surface);border:1px solid var(--border);border-radius:28px;">
+            <p class="quote-display-text">Don't go viral by luck.</p>
+            <p class="quote-display-text" style="background:linear-gradient(135deg,var(--gold-b),var(--vermillion));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">Spread with intention.</p>
+            <div class="gold-divider"></div>
+            <p class="quote-attribution">SpreadEm — Built for India</p>
+          </div>
+        </div>
+
+        <div class="quote-slide" data-quote="14">
+          <div style="padding:56px 48px;background:var(--surface);border:1px solid rgba(201,168,76,0.12);border-radius:28px;text-align:center;position:relative;overflow:hidden;">
+            <div style="position:absolute;bottom:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--gold),transparent);box-shadow:0 0 20px var(--gold-glow);"></div>
+            <p class="quote-display-text" style="color:var(--warm);">The message was always worth hearing.</p>
+            <p class="quote-display-text">It just needed the right<br><span class="grad-gold">network to carry it.</span></p>
+            <div class="gold-divider" style="margin:28px auto;"></div>
+            <p class="quote-attribution">SpreadEm — Why We Exist</p>
+            <button class="btn btn-primary" style="margin-top:28px;" onclick="navigate('signup')">Join SpreadEm →</button>
+          </div>
+        </div>
+        <div class="quote-slide" data-quote="15">
+          <div style="padding:56px 48px;background:var(--surface);border:1px solid var(--border);border-radius:28px;">
+            <div class="quote-giant-mark" style="opacity:0.4;">"</div>
+            <p class="quote-display-text" style="margin-top:-40px;">Your audience isn't everywhere.<br>Your content should be.</p>
+            <div class="gold-divider"></div>
+            <p class="quote-attribution">SpreadEm — Targeting Principle</p>
+          </div>
+        </div>
+
+        <div class="quote-slide" data-quote="16">
+          <div style="padding:56px 48px;background:var(--surface);border:1px solid rgba(201,168,76,0.08);border-radius:28px;text-align:center;">
+            <p class="quote-display-text" style="font-size:clamp(22px,3.5vw,46px);color:var(--warm);font-style:italic;">"Advertising is the price you pay for<br>having an unremarkable product."</p>
+            <p class="quote-display-text" style="margin-top:16px;font-size:clamp(18px,2.5vw,34px);">Distribution is the <span class="grad-gold">reward</span> you earn<br>for having a remarkable one.</p>
+            <div class="gold-divider" style="margin:28px auto;"></div>
+            <p class="quote-attribution">Inspired by Robert Stevens · SpreadEm adaptation</p>
+          </div>
+        </div>
+
+        <div class="quote-slide" data-quote="17">
+          <div style="padding:56px 48px;background:linear-gradient(135deg,rgba(217,68,26,0.05),transparent);border:1px solid rgba(217,68,26,0.1);border-radius:28px;position:relative;overflow:hidden;">
+            <div style="position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--vermillion),transparent);"></div>
+            <p class="quote-display-text">One great post seen by the <span style="color:var(--vermillion);">wrong</span> 100,000<br>is worth less than a decent post<br>seen by the <span class="grad-gold">right</span> 1,000.</p>
+            <div class="gold-divider"></div>
+            <p class="quote-attribution">SpreadEm — The Targeting Truth</p>
+          </div>
+        </div>
+
+        <div class="quote-slide" data-quote="18">
+          <div style="padding:56px 48px;background:var(--surface);border:1px solid var(--border);border-radius:28px;">
+            <div class="quote-giant-mark" style="opacity:0.4;">"</div>
+            <p class="quote-display-text" style="margin-top:-40px;">In a world drowning in content,<br>distribution is the only<br><span class="grad-gold">lifeline.</span></p>
+            <div class="gold-divider"></div>
+            <p class="quote-attribution">SpreadEm — Built for the Noise</p>
+          </div>
+        </div>
+
+        <div class="quote-slide" data-quote="19">
+          <div style="padding:56px 48px;background:var(--ink);border:1px solid rgba(201,168,76,0.12);border-radius:28px;text-align:center;position:relative;overflow:hidden;">
+            <div style="position:absolute;inset:0;background:radial-gradient(ellipse at 50% 100%,rgba(201,168,76,0.07),transparent 60%);pointer-events:none;"></div>
+            <div style="position:absolute;bottom:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--gold),transparent);box-shadow:0 0 20px var(--gold-glow);"></div>
+            <p class="quote-display-text grad-gold" style="font-size:clamp(36px,6vw,78px);font-weight:700;">Content is king.</p>
+            <p class="quote-display-text" style="font-size:clamp(36px,6vw,78px);font-weight:700;">Distribution is God.</p>
+            <div class="gold-divider" style="margin:28px auto;"></div>
+            <p class="quote-attribution">SpreadEm Principle #1 · Chennai, India 2026</p>
+            <button class="btn btn-primary" style="margin-top:28px;" onclick="navigate('signup')">Start Spreading →</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Carousel controls -->
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-top:28px;flex-wrap:wrap;gap:16px;">
+        <div class="quote-dots" id="quote-dots"></div>
+        <div style="display:flex;gap:10px;">
+          <button onclick="prevQuote()" class="btn btn-ghost btn-sm" style="padding:10px 14px;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
+          </button>
+          <button onclick="nextQuote()" class="btn btn-ghost btn-sm" style="padding:10px 14px;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+          </button>
+        </div>
+      </div>
+      <div class="quote-progress" style="margin-top:16px;"><div class="quote-fill" id="quote-fill" style="width:0%;transition:width 4s linear;"></div></div>
+    </div>
+  </div>
+
+  <!-- FOR WHOM -->
+  <div class="section-pad" style="background:var(--ink);border-top:1px solid var(--border);border-bottom:1px solid var(--border);">
+    <div class="container">
+      <div class="reveal" style="text-align:center;margin-bottom:56px;">
+        <p class="t-micro" style="color:var(--gold);margin-bottom:12px;">Two Sides, One Platform</p>
+        <h2 class="t-h2">Who is SpreadEm for?</h2>
+      </div>
+
+      <div class="grid-2 reveal">
+        <div class="for-whom-card left-card">
+          <div class="pill pill-gold" style="margin-bottom:24px;">For Brands &amp; Creators</div>
+          <h2 class="t-h1" style="margin-bottom:16px;">I want to <span class="grad-gold">distribute</span> content.</h2>
+          <p class="t-body" style="margin-bottom:28px;">Reach thousands of niche pages. Pay only when it's posted. Track every spread in real-time.</p>
+          <ul style="list-style:none;margin-bottom:32px;display:flex;flex-direction:column;gap:12px;">
+            <li style="display:flex;align-items:center;gap:10px;font-size:15px;color:var(--warm);"><span style="color:var(--success);">✓</span> Verified spreaders only</li>
+            <li style="display:flex;align-items:center;gap:10px;font-size:15px;color:var(--warm);"><span style="color:var(--success);">✓</span> Pay after campaign approval</li>
+            <li style="display:flex;align-items:center;gap:10px;font-size:15px;color:var(--warm);"><span style="color:var(--success);">✓</span> Track every post live</li>
+          </ul>
+          <button class="btn btn-primary" onclick="navigate('for-clients')">See How It Works →</button>
+        </div>
+
+        <div class="for-whom-card right-card">
+          <div class="pill pill-orange" style="margin-bottom:24px;">For Spreaders</div>
+          <h2 class="t-h1" style="margin-bottom:16px;">I want to <span style="color:var(--vermillion);">earn</span> from my page.</h2>
+          <p class="t-body" style="margin-bottom:28px;">Browse campaigns matching your niche. Post in your own style. Get paid directly to your UPI.</p>
+          <ul style="list-style:none;margin-bottom:32px;display:flex;flex-direction:column;gap:12px;">
+            <li style="display:flex;align-items:center;gap:10px;font-size:15px;color:var(--warm);"><span style="color:var(--success);">✓</span> No scripts, no guidelines</li>
+            <li style="display:flex;align-items:center;gap:10px;font-size:15px;color:var(--warm);"><span style="color:var(--success);">✓</span> ₹0 upfront ever</li>
+            <li style="display:flex;align-items:center;gap:10px;font-size:15px;color:var(--warm);"><span style="color:var(--success);">✓</span> UPI payouts in 48 hrs</li>
+          </ul>
+          <button class="btn btn-outline-gold" onclick="navigate('for-spreaders')" style="border-color:rgba(217,68,26,0.4);color:var(--vermillion);" onmouseover="this.style.background='rgba(217,68,26,0.08)'" onmouseout="this.style.background='transparent'">Start Earning →</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STATS SECTION -->
+  <div class="section-pad">
+    <div class="container">
+      <div class="reveal" style="text-align:center;margin-bottom:64px;">
+        <p class="t-micro" style="color:var(--gold);margin-bottom:12px;">The Promise</p>
+        <h2 class="t-h2">Designed for speed<br>and certainty.</h2>
+      </div>
+      <div class="grid-4 reveal">
+        <div class="stat-card" style="text-align:center;">
+          <div class="counter-num grad-gold" data-target="1000" data-suffix="+">0</div>
+          <p class="stat-label">Spreaders Network</p>
+        </div>
+        <div class="stat-card" style="text-align:center;">
+          <div class="counter-num" style="color:var(--success);">₹0</div>
+          <p class="stat-label">Upfront for Spreaders</p>
+        </div>
+        <div class="stat-card" style="text-align:center;">
+          <div class="counter-num" style="color:var(--aqua);" data-target="24" data-suffix="hr">0</div>
+          <p class="stat-label">Avg Campaign Go-Live</p>
+        </div>
+        <div class="stat-card" style="text-align:center;">
+          <div class="counter-num" style="color:var(--cream);">100%</div>
+          <p class="stat-label">Manual Verification</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FINAL CTA -->
+  <div style="padding:100px 0;background:var(--ink);border-top:1px solid var(--border);position:relative;overflow:hidden;">
+    <div class="blob" style="width:500px;height:500px;background:#2A1F08;top:50%;left:50%;transform:translate(-50%,-50%);opacity:0.1;"></div>
+    <div class="container" style="text-align:center;position:relative;z-index:1;" class="reveal">
+      <div class="gold-divider" style="margin:0 auto 32px;"></div>
+      <h2 class="t-h1" style="margin-bottom:16px;">Your content deserves to be seen.</h2>
+      <p class="t-body" style="max-width:500px;margin:0 auto 40px;">Join SpreadEm. The network that actually spreads.</p>
+      <div style="display:flex;gap:14px;justify-content:center;flex-wrap:wrap;">
+        <button class="btn btn-primary btn-lg" onclick="navigate('signup')">Launch a Campaign</button>
+        <button class="btn btn-ghost btn-lg" onclick="navigate('signup')">Apply as Spreader</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <footer style="background:var(--void);border-top:1px solid var(--border);padding:48px 0 32px;">
+    <div class="container">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:24px;margin-bottom:32px;">
+        <div>
+          <div class="nav-logo" style="margin-bottom:8px;">Spread<span style="color:var(--gold);">Em</span></div>
+          <p class="t-small" style="color:var(--muted);">Content is king. Distribution is God.</p>
+        </div>
+        <div style="display:flex;gap:20px;flex-wrap:wrap;">
+          <a href="#" onclick="navigate('for-clients');return false;" class="t-small" style="color:var(--muted);text-decoration:none;">For Brands</a>
+          <a href="#" onclick="navigate('for-spreaders');return false;" class="t-small" style="color:var(--muted);text-decoration:none;">For Spreaders</a>
+          <a href="#" onclick="openAgreementModal();return false;" class="t-small" style="color:var(--muted);text-decoration:none;">Terms</a>
+          <a href="#" class="t-small" style="color:var(--muted);text-decoration:none;">Privacy</a>
+        </div>
+        <span class="wa-badge">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="var(--wa)"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg>
+          Support via WhatsApp
+        </span>
+      </div>
+      <div style="border-top:1px solid var(--border);padding-top:24px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+        <p class="t-micro">Chennai, India · Founded 2026</p>
+        <p class="t-micro">© 2026 SpreadEm. All rights reserved.</p>
+      </div>
+    </div>
+  </footer>
+</section>
+
+<!-- ═══════════════════════════ FOR CLIENTS ═══════════════════════════ -->
+<section id="s-for-clients" class="page-section">
+  <div style="padding-top:120px;padding-bottom:80px;text-align:center;background:linear-gradient(180deg,rgba(201,168,76,0.04) 0%,transparent 100%);border-bottom:1px solid var(--border);">
+    <div class="container">
+      <p class="t-micro" style="color:var(--gold);margin-bottom:20px;">For Brands &amp; Creators</p>
+      <h1 class="t-display reveal" style="margin-bottom:24px;">Your content,<br><span class="grad-gold">everywhere</span><br>in 24 hours.</h1>
+      <p class="t-body reveal reveal-delay-1" style="max-width:560px;margin:0 auto 40px;font-size:18px;">We distribute your posts across niche-matched pages so your audience actually sees it.</p>
+      <button class="btn btn-primary btn-lg reveal reveal-delay-2" onclick="navigate('signup')">Start Your Campaign →</button>
+    </div>
+  </div>
+
+  <div class="section-pad" style="background:var(--ink);border-bottom:1px solid var(--border);">
+    <div class="container">
+      <div class="grid-3 reveal">
+        <div class="glass-card" style="padding:32px;">
+          <div style="width:48px;height:48px;border-radius:14px;background:rgba(201,168,76,0.1);display:flex;align-items:center;justify-content:center;margin-bottom:20px;color:var(--gold);">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          </div>
+          <h3 class="t-h3" style="margin-bottom:10px;">Verified Spreaders Only</h3>
+          <p class="t-small">Every spreader is manually reviewed before joining the network. Zero bots, zero fake pages.</p>
+        </div>
+        <div class="glass-card" style="padding:32px;">
+          <div style="width:48px;height:48px;border-radius:14px;background:rgba(201,168,76,0.1);display:flex;align-items:center;justify-content:center;margin-bottom:20px;color:var(--gold);">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M22 11.08V12a10 10 0 11-5.93-9.14M22 4L12 14.01l-3-3"/></svg>
+          </div>
+          <h3 class="t-h3" style="margin-bottom:10px;">Pay After Approval</h3>
+          <p class="t-small">We review your content before a single rupee moves. Escrow policy ensures total safety.</p>
+        </div>
+        <div class="glass-card" style="padding:32px;">
+          <div style="width:48px;height:48px;border-radius:14px;background:rgba(201,168,76,0.1);display:flex;align-items:center;justify-content:center;margin-bottom:20px;color:var(--gold);">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+          </div>
+          <h3 class="t-h3" style="margin-bottom:10px;">Track Every Post</h3>
+          <p class="t-small">See post links, screenshots, and spreader activity live on your dashboard.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section-pad">
+    <div class="container">
+      <div class="grid-2 reveal" style="align-items:start;gap:80px;">
+        <div>
+          <p class="t-micro" style="color:var(--gold);margin-bottom:20px;">Client Journey</p>
+          <h2 class="t-h2" style="margin-bottom:40px;">From brief to live,<br>in one day.</h2>
+          <div class="timeline">
+            <div class="timeline-item"><div class="timeline-dot done">1</div><h4>Submit Campaign + Brief</h4><p>Fill the campaign form with your content link, niche, language, and budget.</p></div>
+            <div class="timeline-item"><div class="timeline-dot done">2</div><h4>Founder Reviews Content</h4><p>Personal review within hours. No automated approvals here.</p><span class="wa-badge" style="margin-top:8px;display:inline-flex;">via WhatsApp</span></div>
+            <div class="timeline-item"><div class="timeline-dot active">3</div><h4>Receive Payment Link</h4><p>Approved? You'll get a Razorpay link via WhatsApp.</p></div>
+            <div class="timeline-item"><div class="timeline-dot pending">4</div><h4>Campaign Goes Live</h4><p>Payment confirmed → spreaders can now see and pick your campaign.</p></div>
+            <div class="timeline-item"><div class="timeline-dot pending">5</div><h4>Spreaders Post</h4><p>They pick, post, and submit proof. You watch it happen live.</p></div>
+            <div class="timeline-item"><div class="timeline-dot pending">6</div><h4>Summary Report</h4><p>Campaign closes with a full report delivered via WhatsApp.</p><span class="wa-badge" style="margin-top:8px;display:inline-flex;">via WhatsApp</span></div>
+          </div>
+        </div>
+        <div>
+          <div class="earnings-card" style="margin-bottom:24px;">
+            <p class="t-micro" style="color:var(--gold);margin-bottom:16px;">Pricing Philosophy</p>
+            <h3 class="t-h3" style="margin-bottom:16px;">No retainer. No monthly fee.<br>No follower tax.</h3>
+            <p class="t-body" style="margin-bottom:24px;">"You set the budget. You define the reach. We execute."</p>
+            <div style="display:flex;flex-direction:column;gap:12px;">
+              <div style="display:flex;justify-content:space-between;align-items:center;padding:14px;background:var(--surface);border-radius:12px;">
+                <span class="t-small">Minimum Budget</span>
+                <span class="t-h4 t-gold">₹500</span>
+              </div>
+              <div style="display:flex;justify-content:space-between;align-items:center;padding:14px;background:var(--surface);border-radius:12px;">
+                <span class="t-small">Platform Fee</span>
+                <span class="t-h4 t-gold">₹0 upfront</span>
+              </div>
+              <div style="display:flex;justify-content:space-between;align-items:center;padding:14px;background:var(--surface);border-radius:12px;">
+                <span class="t-small">Pay model</span>
+                <span class="t-h4 t-gold">Per verified post</span>
+              </div>
+            </div>
+          </div>
+          <button class="btn btn-primary btn-full" onclick="navigate('signup')">Start Your Campaign →</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════ FOR SPREADERS ═══════════════════════════ -->
+<section id="s-for-spreaders" class="page-section">
+  <div style="padding-top:120px;padding-bottom:80px;text-align:center;border-bottom:1px solid var(--border);background:linear-gradient(180deg,rgba(217,68,26,0.04) 0%,transparent 100%);">
+    <div class="container">
+      <p class="t-micro" style="color:var(--vermillion);margin-bottom:20px;">For Spreaders</p>
+      <h1 class="t-display reveal" style="margin-bottom:24px;">Turn your meme page<br>into <span style="color:var(--vermillion);">income.</span></h1>
+      <p class="t-body reveal reveal-delay-1" style="max-width:540px;margin:0 auto 40px;font-size:18px;">Pick campaigns that fit your vibe. Post your way. Get paid directly to your UPI.</p>
+      <button class="btn btn-primary btn-lg reveal reveal-delay-2" onclick="navigate('signup')">Apply as a Spreader →</button>
+    </div>
+  </div>
+
+  <div class="section-pad" style="background:var(--ink);border-bottom:1px solid var(--border);">
+    <div class="container">
+      <div class="grid-3 reveal">
+        <div class="glass-card" style="padding:32px;">
+          <div style="width:48px;height:48px;border-radius:14px;background:rgba(217,68,26,0.1);display:flex;align-items:center;justify-content:center;margin-bottom:20px;color:var(--vermillion);">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+          </div>
+          <h3 class="t-h3" style="margin-bottom:10px;">Browse Real Campaigns</h3>
+          <p class="t-small">Niche-matched campaign feed. Only brands relevant to your audience, always.</p>
+        </div>
+        <div class="glass-card" style="padding:32px;">
+          <div style="width:48px;height:48px;border-radius:14px;background:rgba(217,68,26,0.1);display:flex;align-items:center;justify-content:center;margin-bottom:20px;color:var(--vermillion);">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          </div>
+          <h3 class="t-h3" style="margin-bottom:10px;">Post in Your Style</h3>
+          <p class="t-small">No scripts. No rigid guidelines. Your page, your voice, your audience.</p>
+        </div>
+        <div class="glass-card" style="padding:32px;">
+          <div style="width:48px;height:48px;border-radius:14px;background:rgba(217,68,26,0.1);display:flex;align-items:center;justify-content:center;margin-bottom:20px;color:var(--vermillion);">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
+          </div>
+          <h3 class="t-h3" style="margin-bottom:10px;">Get Paid via UPI</h3>
+          <p class="t-small">Fast manual payouts. No bank account forms. Just your UPI ID within 48 hours.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section-pad">
+    <div class="container">
+      <div class="grid-2 reveal" style="align-items:start;gap:80px;">
+        <div>
+          <p class="t-micro" style="color:var(--gold);margin-bottom:20px;">Spreader Journey</p>
+          <h2 class="t-h2" style="margin-bottom:40px;">From sign-up<br>to first payout.</h2>
+          <div class="timeline">
+            <div class="timeline-item"><div class="timeline-dot done">1</div><h4>Sign Up with Instagram Handle</h4><p>Takes 3 minutes. No follower minimum, just authenticity.</p></div>
+            <div class="timeline-item"><div class="timeline-dot done">2</div><h4>Founder Reviews Your Page</h4><p>Manual review. Real humans, real decisions.</p></div>
+            <div class="timeline-item"><div class="timeline-dot active">3</div><h4>You're In</h4><p>WhatsApp: "You're approved. Here's your dashboard."</p><span class="wa-badge" style="margin-top:8px;display:inline-flex;">via WhatsApp</span></div>
+            <div class="timeline-item"><div class="timeline-dot pending">4</div><h4>Browse Campaigns</h4><p>Filter by niche and language. Pick what fits.</p></div>
+            <div class="timeline-item"><div class="timeline-dot pending">5</div><h4>Request to Post</h4><p>One tap. Founder approves your pick.</p></div>
+            <div class="timeline-item"><div class="timeline-dot pending">6</div><h4>Post &amp; Submit Proof</h4><p>Share the post link + screenshot on your dashboard.</p></div>
+            <div class="timeline-item"><div class="timeline-dot pending">7</div><h4>Get Paid</h4><p>UPI payout within 48 hours of verification.</p><span class="wa-badge" style="margin-top:8px;display:inline-flex;">Payout via WhatsApp</span></div>
+          </div>
+        </div>
+        <div>
+          <div class="earnings-card" style="margin-bottom:24px;">
+            <p class="t-micro" style="color:var(--gold);margin-bottom:8px;">Estimated Earnings</p>
+            <div class="payout-amount" style="font-size:42px;margin:16px 0;">₹500 – ₹5,000</div>
+            <p class="t-small" style="margin-bottom:20px;">per campaign, based on page size and niche</p>
+            <div style="display:flex;flex-direction:column;gap:10px;">
+              <div style="display:flex;align-items:center;justify-content:space-between;">
+                <span class="t-small">Small page (under 5K)</span><span class="t-small t-gold">₹500–₹1,000</span>
+              </div>
+              <div class="prog-bar"><div class="prog-fill" style="width:25%;"></div></div>
+              <div style="display:flex;align-items:center;justify-content:space-between;">
+                <span class="t-small">Medium page (5K–50K)</span><span class="t-small t-gold">₹1,000–₹3,000</span>
+              </div>
+              <div class="prog-bar"><div class="prog-fill" style="width:60%;"></div></div>
+              <div style="display:flex;align-items:center;justify-content:space-between;">
+                <span class="t-small">Large page (50K+)</span><span class="t-small t-gold">₹3,000–₹5,000+</span>
+              </div>
+              <div class="prog-bar"><div class="prog-fill" style="width:95%;"></div></div>
+            </div>
+          </div>
+
+          <div class="glass-card" style="padding:28px;margin-bottom:24px;">
+            <p class="t-micro" style="color:var(--gold);margin-bottom:16px;">FAQ</p>
+            <div class="accordion-item">
+              <button class="accordion-trigger" onclick="toggleAccordion(this)">
+                Do I need a minimum follower count?
+                <svg class="arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12l7 7 7-7"/></svg>
+              </button>
+              <div class="accordion-body"><div class="accordion-body-inner t-small">No hard minimum, but we look for engaged, real audiences. A 2,000-follower page with high engagement beats a 50,000-follower ghost page.</div></div>
+            </div>
+            <div class="accordion-item">
+              <button class="accordion-trigger" onclick="toggleAccordion(this)">
+                Can I decline a campaign?
+                <svg class="arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12l7 7 7-7"/></svg>
+              </button>
+              <div class="accordion-body"><div class="accordion-body-inner t-small">Absolutely. You only post what aligns with your page and values. No pressure, no penalty.</div></div>
+            </div>
+            <div class="accordion-item">
+              <button class="accordion-trigger" onclick="toggleAccordion(this)">
+                How fast are payouts?
+                <svg class="arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12l7 7 7-7"/></svg>
+              </button>
+              <div class="accordion-body"><div class="accordion-body-inner t-small">Within 48 hours of post verification. No delays, no excuses.</div></div>
+            </div>
+          </div>
+          <button class="btn btn-primary btn-full" onclick="navigate('signup')">Apply as a Spreader →</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════ SIGNUP ═══════════════════════════ -->
+<section id="s-signup" class="page-section" style="min-height:100vh;display:none;">
+  <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:120px 20px 60px;">
+    <div style="width:100%;max-width:860px;">
+      
+      <!-- ROLE PICKER -->
+      <div id="role-picker">
+        <div style="text-align:center;margin-bottom:56px;">
+          <p class="t-micro" style="color:var(--gold);margin-bottom:16px;">Get Started</p>
+          <h2 class="t-h2">Who are you?</h2>
+          <p class="t-body" style="margin-top:12px;">Choose your role to get started.</p>
+        </div>
+        <div class="grid-2" style="max-width:700px;margin:0 auto;">
+          <div class="role-card gold" onclick="showSignupForm('client')">
+            <div class="role-icon">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2"/></svg>
+            </div>
+            <h3 class="t-h3" style="margin-bottom:12px;">I'm a Brand or Creator</h3>
+            <p class="t-small">I want to distribute content across pages</p>
+            <div class="gold-divider" style="margin:20px auto;"></div>
+            <span class="pill pill-gold">Start a Campaign →</span>
+          </div>
+          <div class="role-card vermillion" onclick="showSignupForm('spreader')">
+            <div class="role-icon">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+            </div>
+            <h3 class="t-h3" style="margin-bottom:12px;">I Own a Page or Account</h3>
+            <p class="t-small">I want to earn by posting campaigns</p>
+            <div class="gold-divider" style="margin:20px auto;background:linear-gradient(90deg,var(--vermillion),transparent);"></div>
+            <span class="pill pill-orange">Start Earning →</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- CLIENT FORM -->
+      <div id="signup-client-form" style="display:none;max-width:520px;margin:0 auto;">
+        <button onclick="showRolePicker()" class="btn btn-ghost btn-sm" style="margin-bottom:28px;">← Back</button>
+        <div class="glass-card" style="padding:40px;">
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:32px;">
+            <div>
+              <h2 class="t-h2" style="font-size:26px;">Create your account</h2>
+              <span class="pill pill-gold" style="margin-top:8px;display:inline-flex;">As a Brand / Creator</span>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Full Name</label>
+            <input type="text" class="form-input" placeholder="Arjun Mehta" id="c-name">
+          </div>
+          <div class="form-group">
+            <label class="form-label">WhatsApp Number</label>
+            <div class="input-prefix"><span>+91</span><input type="tel" placeholder="9876543210" id="c-phone"></div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Brand Name</label>
+            <input type="text" class="form-input" placeholder="Your Brand or Creator Name" id="c-brand">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Instagram / YouTube Handle</label>
+            <div class="input-prefix"><span>@</span><input type="text" placeholder="yourbrand" id="c-handle"></div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Category</label>
+            <select class="form-select" id="c-category">
+              <option value="">Select category...</option>
+              <option>Fashion</option><option>Food</option><option>Tech</option>
+              <option>Entertainment</option><option>Music</option><option>Health</option>
+              <option>Finance</option><option>Other</option>
+            </select>
+          </div>
+          <div class="check-row" style="margin-bottom:28px;" onclick="toggleCheck('c-agree')">
+            <div class="custom-check" id="c-agree"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="1.5,6 4.5,9 10.5,3"/></svg></div>
+            <label class="check-label">I have read and agree to SpreadEm's <a href="#" onclick="openAgreementModal();return false;">platform terms</a></label>
+          </div>
+          <button class="btn btn-primary btn-full" onclick="submitClientSignup()">Create My Account →</button>
+          <p class="form-note" style="text-align:center;margin-top:16px;">Your account will be reviewed within 24 hours. We'll WhatsApp you when you're approved.</p>
+          <div style="text-align:center;margin-top:12px;"><span class="wa-badge">Approval via WhatsApp</span></div>
+        </div>
+      </div>
+
+      <!-- SPREADER FORM -->
+      <div id="signup-spreader-form" style="display:none;max-width:520px;margin:0 auto;">
+        <button onclick="showRolePicker()" class="btn btn-ghost btn-sm" style="margin-bottom:28px;">← Back</button>
+        <div class="glass-card" style="padding:40px;">
+          <div style="margin-bottom:32px;">
+            <h2 class="t-h2" style="font-size:26px;">Join the network</h2>
+            <span class="pill pill-orange" style="margin-top:8px;display:inline-flex;">As a Spreader</span>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Full Name</label>
+            <input type="text" class="form-input" placeholder="Kavya Reddy" id="s-name">
+          </div>
+          <div class="form-group">
+            <label class="form-label">WhatsApp Number</label>
+            <div class="input-prefix"><span>+91</span><input type="tel" placeholder="9876543210" id="s-phone"></div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Instagram Handle</label>
+            <div class="input-prefix"><span>@</span><input type="text" placeholder="yourmemepage" id="s-ig"></div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Niche</label>
+            <select class="form-select" id="s-niche">
+              <option value="">Select niche...</option>
+              <option>Memes</option><option>Cricket</option><option>Bollywood</option>
+              <option>Tech</option><option>Finance</option><option>Gaming</option>
+              <option>Fashion</option><option>Regional</option><option>Other</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Primary Language</label>
+            <select class="form-select" id="s-lang">
+              <option value="">Select language...</option>
+              <option>Tamil</option><option>Hindi</option><option>English</option>
+              <option>Telugu</option><option>Kannada</option><option>Malayalam</option><option>Marathi</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Approximate Followers</label>
+            <select class="form-select" id="s-followers">
+              <option value="">Select range...</option>
+              <option>Under 5K</option><option>5K–20K</option>
+              <option>20K–100K</option><option>100K+</option>
+            </select>
+          </div>
+          <div class="check-row" style="margin-bottom:28px;" onclick="toggleCheck('s-agree')">
+            <div class="custom-check" id="s-agree"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="1.5,6 4.5,9 10.5,3"/></svg></div>
+            <label class="check-label">I have read and agree to SpreadEm's <a href="#" onclick="openAgreementModal();return false;">platform terms</a></label>
+          </div>
+          <button class="btn btn-primary btn-full" onclick="submitSpreaderSignup()">Apply as a Spreader →</button>
+          <p class="form-note" style="text-align:center;margin-top:16px;">We review every page manually. Expect a WhatsApp from us within 48 hours.</p>
+          <div style="text-align:center;margin-top:12px;"><span class="wa-badge">Reviewed via WhatsApp</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════ LOGIN ═══════════════════════════ -->
+<section id="s-login" class="page-section" style="min-height:100vh;display:none;">
+  <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:100px 20px;">
+    <div style="width:100%;max-width:440px;">
+      <div class="glass-card" style="padding:48px;">
+        <div style="text-align:center;margin-bottom:36px;">
+          <div class="nav-logo" style="font-size:32px;margin-bottom:20px;display:block;">Spread<span style="color:var(--gold);">Em</span></div>
+          <h2 class="t-h2" style="font-size:30px;margin-bottom:8px;">Welcome back.</h2>
+          <p class="t-small">Enter your email to receive a login OTP.</p>
+        </div>
+
+        <div id="login-email-step">
+          <div class="form-group">
+            <label class="form-label">Email Address</label>
+            <input type="email" class="form-input" placeholder="you@example.com" id="login-email">
+          </div>
+          <button class="btn btn-primary btn-full" onclick="sendOTP()" style="margin-bottom:20px;">Send OTP →</button>
+          <div style="text-align:center;"><p class="t-small" style="color:var(--muted);margin-bottom:16px;">Or use a demo account</p>
+          <div style="display:flex;flex-direction:column;gap:8px;">
+            <button class="btn btn-ghost btn-sm btn-full" onclick="demoLogin('client')">🏢 Demo as Client</button>
+            <button class="btn btn-ghost btn-sm btn-full" onclick="demoLogin('spreader')">📱 Demo as Spreader</button>
+            <button class="btn btn-ghost btn-sm btn-full" onclick="demoLogin('admin')">⚡ Demo as Admin</button>
+          </div></div>
+        </div>
+
+        <div id="login-otp-step" style="display:none;">
+          <div style="text-align:center;margin-bottom:28px;">
+            <p class="t-small">Enter the 6-digit code sent to</p>
+            <p class="t-small t-gold" id="otp-email-display"></p>
+          </div>
+          <div class="otp-grid" style="margin-bottom:24px;">
+            <input class="otp-input" maxlength="1" type="text" oninput="otpNext(this,0)">
+            <input class="otp-input" maxlength="1" type="text" oninput="otpNext(this,1)">
+            <input class="otp-input" maxlength="1" type="text" oninput="otpNext(this,2)">
+            <input class="otp-input" maxlength="1" type="text" oninput="otpNext(this,3)">
+            <input class="otp-input" maxlength="1" type="text" oninput="otpNext(this,4)">
+            <input class="otp-input" maxlength="1" type="text" oninput="otpNext(this,5)">
+          </div>
+          <button class="btn btn-primary btn-full" onclick="verifyOTP()" style="margin-bottom:16px;">Verify &amp; Enter →</button>
+          <div style="text-align:center;"><button class="btn btn-ghost btn-sm" onclick="showEmailStep()">← Back</button></div>
+        </div>
+      </div>
+      <p class="t-small" style="text-align:center;margin-top:20px;color:var(--muted);">Don't have an account? <a href="#" onclick="navigate('signup');return false;" style="color:var(--gold);text-decoration:none;">Sign up</a></p>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════ CLIENT DASHBOARD ═══════════════════════════ -->
+<section id="s-client-dashboard" class="page-section" style="display:none;">
+  <nav class="dash-nav">
+    <a class="nav-logo" href="#" onclick="navigate('client-dashboard');return false;">Spread<span style="color:var(--gold);">Em</span></a>
+    <div style="display:flex;align-items:center;gap:16px;">
+      <div class="dropdown">
+        <div class="avatar-btn" onclick="toggleDropdown('client-dd')">A</div>
+        <div class="dropdown-menu" id="client-dd">
+          <div class="dropdown-item"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2M12 11a4 4 0 100-8 4 4 0 000 8z"/></svg>My Profile</div>
+          <div class="dropdown-item"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2"/><path d="M1 10h22"/></svg>Billing</div>
+          <div class="dropdown-item" onclick="navigate('login')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/></svg>Logout</div>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <div style="padding:40px 32px;">
+    <div style="margin-bottom:36px;">
+      <h2 class="t-h2" style="margin-bottom:6px;">Good evening, Arjun. 👋</h2>
+      <p class="t-body">Here's what's happening with your campaigns.</p>
+    </div>
+
+    <div class="grid-4" style="margin-bottom:40px;">
+      <div class="stat-card"><div class="stat-num" style="color:var(--aqua);" data-target="3" data-suffix="">0</div><div class="stat-label">Active Campaigns</div></div>
+      <div class="stat-card"><div class="stat-num grad-gold" data-target="247" data-suffix="">0</div><div class="stat-label">Total Spreads</div></div>
+      <div class="stat-card"><div class="stat-num" style="color:var(--warn);" data-target="18" data-suffix="">0</div><div class="stat-label">Pending Posts</div></div>
+      <div class="stat-card"><div class="stat-num" style="color:var(--success);">₹48K</div><div class="stat-label">Budget Spent</div></div>
+    </div>
+
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:20px;">
+      <h3 class="t-h3">Your Campaigns</h3>
+      <button class="btn btn-primary btn-sm" onclick="navigate('client-new')">+ New Campaign</button>
+    </div>
+
+    <div class="tab-bar">
+      <button class="tab-btn active" onclick="switchTab(this,'camp-all')">All</button>
+      <button class="tab-btn" onclick="switchTab(this,'camp-live')">Live</button>
+      <button class="tab-btn" onclick="switchTab(this,'camp-pending')">Pending</button>
+      <button class="tab-btn" onclick="switchTab(this,'camp-done')">Completed</button>
+    </div>
+
+    <div class="tab-content active" id="camp-all">
+      <div style="display:flex;flex-direction:column;gap:14px;" id="campaigns-list"></div>
+    </div>
+    <div class="tab-content" id="camp-live">
+      <div style="display:flex;flex-direction:column;gap:14px;" id="campaigns-live-list"></div>
+    </div>
+    <div class="tab-content" id="camp-pending">
+      <p class="t-small" style="color:var(--muted);padding:20px 0;">No campaigns currently in review.</p>
+    </div>
+    <div class="tab-content" id="camp-done">
+      <p class="t-small" style="color:var(--muted);padding:20px 0;">No completed campaigns yet.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════ NEW CAMPAIGN ═══════════════════════════ -->
+<section id="s-client-new" class="page-section" style="display:none;">
+  <nav class="dash-nav">
+    <a class="nav-logo" href="#" onclick="navigate('client-dashboard');return false;">Spread<span style="color:var(--gold);">Em</span></a>
+    <button class="btn btn-ghost btn-sm" onclick="navigate('client-dashboard')">← Dashboard</button>
+  </nav>
+  <div style="max-width:680px;margin:0 auto;padding:48px 24px;">
+    <h2 class="t-h2" style="margin-bottom:8px;">New Campaign</h2>
+    <p class="t-body" style="margin-bottom:36px;">Fill in the details and we'll get back to you within hours.</p>
+
+    <div class="steps-bar" style="margin-bottom:44px;">
+      <div class="step-item">
+        <div style="display:flex;flex-direction:column;align-items:center;">
+          <div class="step-circle active" id="sc1">1</div>
+          <p class="step-label active" id="sl1">Content</p>
+        </div>
+        <div class="step-line" id="sline1"></div>
+      </div>
+      <div class="step-item">
+        <div style="display:flex;flex-direction:column;align-items:center;">
+          <div class="step-circle pending" id="sc2">2</div>
+          <p class="step-label" id="sl2">Targeting</p>
+        </div>
+        <div class="step-line" id="sline2"></div>
+      </div>
+      <div class="step-item" style="flex:0;">
+        <div style="display:flex;flex-direction:column;align-items:center;">
+          <div class="step-circle pending" id="sc3">3</div>
+          <p class="step-label" id="sl3">Budget</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 1 -->
+    <div class="form-step active" id="fstep1">
+      <div class="form-group">
+        <label class="form-label">Campaign Title</label>
+        <input type="text" class="form-input" placeholder="e.g. Zepto Diwali Campaign 2026" id="nc-title">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Content URL</label>
+        <input type="url" class="form-input" placeholder="https://instagram.com/p/..." id="nc-url">
+      </div>
+      <div class="form-group" style="position:relative;">
+        <label class="form-label">Campaign Brief</label>
+        <textarea class="form-textarea" id="nc-brief" placeholder="Describe what spreaders should know about this campaign, tone, context..." oninput="updateCharCount(this,'nc-char',100,500)"></textarea>
+        <span class="char-count" id="nc-char">0 / 500</span>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Creative Files (Optional)</label>
+        <div class="drop-zone" id="drop-zone" onclick="triggerFileUpload()">
+          <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="1.5" style="margin:0 auto 12px;display:block;"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
+          <p class="t-small" style="margin-bottom:4px;">Drop your image/video here or <span style="color:var(--gold);">browse</span></p>
+          <p class="t-micro">PNG, JPG, MP4, PDF · Max 10MB</p>
+          <input type="file" id="file-input" style="display:none;" onchange="handleFileUpload(this)">
+        </div>
+        <div id="file-preview" style="display:none;margin-top:12px;padding:12px 16px;background:var(--surface);border-radius:12px;display:flex;align-items:center;gap:12px;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--success)" stroke-width="2"><path d="M22 11.08V12a10 10 0 11-5.93-9.14M22 4L12 14.01l-3-3"/></svg>
+          <span class="t-small" id="file-name"></span>
+        </div>
+      </div>
+      <div style="display:flex;justify-content:flex-end;margin-top:8px;">
+        <button class="btn btn-primary" onclick="goStep(2)">Next Step →</button>
+      </div>
+    </div>
+
+    <!-- STEP 2 -->
+    <div class="form-step" id="fstep2">
+      <div class="form-group">
+        <label class="form-label">Target Niche (select all that apply)</label>
+        <div class="chip-grid" id="niche-chips">
+          <span class="chip" onclick="toggleChip(this)">Memes</span><span class="chip" onclick="toggleChip(this)">Cricket</span><span class="chip" onclick="toggleChip(this)">Bollywood</span><span class="chip" onclick="toggleChip(this)">Tech</span><span class="chip" onclick="toggleChip(this)">Finance</span><span class="chip" onclick="toggleChip(this)">Gaming</span><span class="chip" onclick="toggleChip(this)">Fashion</span><span class="chip" onclick="toggleChip(this)">Food</span><span class="chip" onclick="toggleChip(this)">Regional</span><span class="chip" onclick="toggleChip(this)">Other</span>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Target Language</label>
+        <div class="chip-grid">
+          <span class="chip" onclick="toggleChip(this)">Tamil</span><span class="chip" onclick="toggleChip(this)">Hindi</span><span class="chip" onclick="toggleChip(this)">English</span><span class="chip" onclick="toggleChip(this)">Telugu</span><span class="chip" onclick="toggleChip(this)">Kannada</span><span class="chip" onclick="toggleChip(this)">Malayalam</span><span class="chip" onclick="toggleChip(this)">Marathi</span>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Target Region</label>
+        <div class="chip-grid">
+          <span class="chip" onclick="toggleChip(this)">Tamil Nadu</span><span class="chip" onclick="toggleChip(this)">Maharashtra</span><span class="chip" onclick="toggleChip(this)">Delhi NCR</span><span class="chip" onclick="toggleChip(this)">Karnataka</span><span class="chip selected" onclick="toggleChip(this)">All India</span><span class="chip" onclick="toggleChip(this)">Tier 2 Cities</span>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Campaign Goal</label>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+          <div class="glass-card" style="padding:16px;cursor:none;" onclick="selectGoal(this,'awareness')">
+            <div style="font-size:20px;margin-bottom:6px;">🎯</div>
+            <div class="t-h4" style="margin-bottom:4px;">Brand Awareness</div>
+            <div class="t-micro">Maximum reach</div>
+          </div>
+          <div class="glass-card" style="padding:16px;cursor:none;" onclick="selectGoal(this,'engagement')">
+            <div style="font-size:20px;margin-bottom:6px;">💬</div>
+            <div class="t-h4" style="margin-bottom:4px;">Engagement</div>
+            <div class="t-micro">Comments &amp; saves</div>
+          </div>
+          <div class="glass-card" style="padding:16px;cursor:none;" onclick="selectGoal(this,'followers')">
+            <div style="font-size:20px;margin-bottom:6px;">👥</div>
+            <div class="t-h4" style="margin-bottom:4px;">Follower Growth</div>
+            <div class="t-micro">New followers</div>
+          </div>
+          <div class="glass-card" style="padding:16px;cursor:none;" onclick="selectGoal(this,'traffic')">
+            <div style="font-size:20px;margin-bottom:6px;">🔗</div>
+            <div class="t-h4" style="margin-bottom:4px;">Link Traffic</div>
+            <div class="t-micro">Drive clicks</div>
+          </div>
+        </div>
+      </div>
+      <div style="display:flex;justify-content:space-between;margin-top:8px;">
+        <button class="btn btn-ghost" onclick="goStep(1)">← Back</button>
+        <button class="btn btn-primary" onclick="goStep(3)">Next Step →</button>
+      </div>
+    </div>
+
+    <!-- STEP 3 -->
+    <div class="form-step" id="fstep3">
+      <div class="form-group">
+        <label class="form-label">Campaign Budget</label>
+        <div class="input-prefix" style="margin-bottom:12px;"><span>₹</span><input type="number" placeholder="5000" id="nc-budget" min="500" max="50000" oninput="updateBudgetDisplay(this)"></div>
+        <input type="range" min="500" max="50000" step="500" value="5000" id="nc-slider" oninput="syncBudgetSlider(this)">
+        <p class="form-note" id="budget-estimate">Estimated reach: 8–15 page posts at this budget</p>
+      </div>
+
+      <div class="glass-card" style="padding:24px;margin-bottom:24px;">
+        <p class="t-micro" style="color:var(--gold);margin-bottom:16px;">Campaign Summary</p>
+        <div style="display:flex;flex-direction:column;gap:10px;" id="campaign-summary">
+          <div style="display:flex;justify-content:space-between;"><span class="t-small t-muted">Title</span><span class="t-small" id="sum-title">—</span></div>
+          <div style="display:flex;justify-content:space-between;"><span class="t-small t-muted">Content URL</span><span class="t-small" id="sum-url">—</span></div>
+          <div style="display:flex;justify-content:space-between;"><span class="t-small t-muted">Budget</span><span class="t-small t-gold" id="sum-budget">—</span></div>
+        </div>
+      </div>
+
+      <div class="check-row" style="margin-bottom:12px;" onclick="toggleCheck('nc-agree1')">
+        <div class="custom-check" id="nc-agree1"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="1.5,6 4.5,9 10.5,3"/></svg></div>
+        <label class="check-label">This content complies with SpreadEm content guidelines</label>
+      </div>
+      <div class="check-row" style="margin-bottom:28px;" onclick="toggleCheck('nc-agree2')">
+        <div class="custom-check" id="nc-agree2"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="1.5,6 4.5,9 10.5,3"/></svg></div>
+        <label class="check-label">I agree to the terms and escrow payment policy</label>
+      </div>
+
+      <button class="btn btn-primary btn-full" onclick="submitCampaign()" style="margin-bottom:12px;">Submit Campaign for Review →</button>
+      <p class="form-note" style="text-align:center;">You will only be charged after founder approval via WhatsApp.</p>
+      <div style="text-align:center;margin-top:10px;"><span class="wa-badge">Approval via WhatsApp</span></div>
+
+      <div style="display:flex;justify-content:flex-start;margin-top:20px;">
+        <button class="btn btn-ghost" onclick="goStep(2)">← Back</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════ SPREADER DASHBOARD ═══════════════════════════ -->
+<section id="s-spreader-dashboard" class="page-section" style="display:none;">
+  <nav class="dash-nav">
+    <a class="nav-logo" href="#" onclick="navigate('spreader-dashboard');return false;">Spread<span style="color:var(--gold);">Em</span></a>
+    <div style="display:flex;align-items:center;gap:16px;">
+      <div class="dropdown">
+        <div class="avatar-btn" style="background:rgba(217,68,26,0.15);color:var(--vermillion);border-color:rgba(217,68,26,0.3);" onclick="toggleDropdown('sp-dd')">K</div>
+        <div class="dropdown-menu" id="sp-dd">
+          <div class="dropdown-item">Profile</div>
+          <div class="dropdown-item" onclick="navigate('login')">Logout</div>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <div style="padding:40px 32px;">
+    <div style="margin-bottom:28px;">
+      <h2 class="t-h2" style="margin-bottom:6px;">Hey Kavya. 👋</h2>
+      <p class="t-body">Your earnings dashboard — pick campaigns and get paid.</p>
+    </div>
+
+    <div class="grid-4" style="margin-bottom:36px;">
+      <div class="stat-card"><div class="stat-num" style="color:var(--success);">₹12,500</div><div class="stat-label">Total Earned</div></div>
+      <div class="stat-card"><div class="stat-num grad-gold" data-target="8" data-suffix="">0</div><div class="stat-label">Campaigns Completed</div></div>
+      <div class="stat-card"><div class="stat-num" style="color:var(--aqua);" data-target="2" data-suffix="">0</div><div class="stat-label">Active Posts</div></div>
+      <div class="stat-card"><div class="stat-num" style="color:var(--warn);">₹3,200</div><div class="stat-label">Pending Payout</div></div>
+    </div>
+
+    <div class="tab-bar">
+      <button class="tab-btn active" onclick="switchTab(this,'sp-available')">Available Campaigns</button>
+      <button class="tab-btn" onclick="switchTab(this,'sp-submissions')">My Submissions</button>
+    </div>
+
+    <div class="tab-content active" id="sp-available">
+      <div style="margin-bottom:20px;display:flex;gap:8px;flex-wrap:wrap;">
+        <span class="chip selected" onclick="toggleChip(this)">All Niches</span>
+        <span class="chip" onclick="toggleChip(this)">Memes</span>
+        <span class="chip" onclick="toggleChip(this)">Tech</span>
+        <span class="chip" onclick="toggleChip(this)">Finance</span>
+        <span class="chip" onclick="toggleChip(this)">Bollywood</span>
+      </div>
+      <div class="grid-2" id="spreader-campaigns-grid"></div>
+    </div>
+
+    <div class="tab-content" id="sp-submissions">
+      <div style="display:flex;flex-direction:column;gap:14px;" id="spreader-submissions-list"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════ ADMIN PANEL ═══════════════════════════ -->
+<section id="s-admin" class="page-section" style="display:none;">
+  <div class="admin-layout">
+    <aside class="admin-sidebar">
+      <div class="admin-logo">
+        <div class="nav-logo" style="font-size:20px;">Spread<span style="color:var(--gold);">Em</span></div>
+        <p>Admin Panel</p>
+      </div>
+      <nav>
+        <div class="sidebar-nav-item active" id="aside-overview" onclick="showAdminTab('overview')">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>Overview
+        </div>
+        <div class="sidebar-nav-item" id="aside-spreaders" onclick="showAdminTab('spreaders')">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 11a4 4 0 100-8 4 4 0 000 8zM23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>Spreaders
+        </div>
+        <div class="sidebar-nav-item" id="aside-clients" onclick="showAdminTab('clients')">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2"/></svg>Clients
+        </div>
+        <div class="sidebar-nav-item" id="aside-campaigns" onclick="showAdminTab('campaigns')">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>Campaigns
+        </div>
+        <div class="sidebar-nav-item" id="aside-requests" onclick="showAdminTab('requests')">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>Requests
+        </div>
+        <div class="sidebar-nav-item" id="aside-submissions" onclick="showAdminTab('submissions')">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8zM14 2v6h6M16 13H8M16 17H8M10 9H8"/></svg>Submissions
+        </div>
+        <div style="margin-top:auto;padding:16px 0 0;">
+          <div class="sidebar-nav-item" onclick="navigate('login')" style="color:var(--err);">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/></svg>Logout
+          </div>
+        </div>
+      </nav>
+    </aside>
+
+    <main class="admin-main">
+      <!-- OVERVIEW -->
+      <div id="admin-overview" class="admin-tab-content">
+        <h2 class="t-h2" style="margin-bottom:28px;">Overview</h2>
+        <div class="grid-4" style="margin-bottom:32px;">
+          <div class="stat-card">
+            <div class="stat-num grad-gold" data-target="312" data-suffix="">0</div>
+            <div class="stat-label">Total Spreaders</div>
+            <span class="pill pill-yellow" style="margin-top:10px;">14 pending</span>
+          </div>
+          <div class="stat-card">
+            <div class="stat-num" style="color:var(--aqua);" data-target="87" data-suffix="">0</div>
+            <div class="stat-label">Total Clients</div>
+            <span class="pill pill-yellow" style="margin-top:10px;">3 pending</span>
+          </div>
+          <div class="stat-card">
+            <div class="stat-num" style="color:var(--success);" data-target="24" data-suffix="">0</div>
+            <div class="stat-label">Active Campaigns</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-num grad-gold">₹2.4L</div>
+            <div class="stat-label">Revenue This Month</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-num" style="color:var(--warn);">₹38K</div>
+            <div class="stat-label">Pending Payouts</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-num" style="color:var(--aqua);" data-target="56" data-suffix="">0</div>
+            <div class="stat-label">Posts Awaiting Verification</div>
+          </div>
+        </div>
+
+        <div class="glass-card" style="padding:28px;">
+          <h3 class="t-h3" style="margin-bottom:20px;">Recent Activity</h3>
+          <div id="activity-feed" style="display:flex;flex-direction:column;gap:14px;"></div>
+        </div>
+      </div>
+
+      <!-- SPREADERS -->
+      <div id="admin-spreaders" class="admin-tab-content" style="display:none;">
+        <h2 class="t-h2" style="margin-bottom:24px;">Spreaders</h2>
+        <div class="tab-bar">
+          <button class="tab-btn active" onclick="switchTab(this,'sp-pending')">Pending (14)</button>
+          <button class="tab-btn" onclick="switchTab(this,'sp-approved')">Approved</button>
+          <button class="tab-btn" onclick="switchTab(this,'sp-rejected')">Rejected</button>
+        </div>
+        <div class="tab-content active" id="sp-pending">
+          <div class="table-scroll"><table class="data-table" id="spreaders-table"></table></div>
+        </div>
+        <div class="tab-content" id="sp-approved">
+          <div class="table-scroll"><table class="data-table" id="spreaders-approved-table"></table></div>
+        </div>
+        <div class="tab-content" id="sp-rejected">
+          <p class="t-small" style="color:var(--muted);padding:20px 0;">No rejected spreaders.</p>
+        </div>
+      </div>
+
+      <!-- CLIENTS -->
+      <div id="admin-clients" class="admin-tab-content" style="display:none;">
+        <h2 class="t-h2" style="margin-bottom:24px;">Clients</h2>
+        <div class="table-scroll"><table class="data-table" id="clients-table"></table></div>
+      </div>
+
+      <!-- CAMPAIGNS -->
+      <div id="admin-campaigns" class="admin-tab-content" style="display:none;">
+        <h2 class="t-h2" style="margin-bottom:24px;">Campaigns</h2>
+        <div class="table-scroll"><table class="data-table" id="admin-campaigns-table"></table></div>
+      </div>
+
+      <!-- REQUESTS -->
+      <div id="admin-requests" class="admin-tab-content" style="display:none;">
+        <h2 class="t-h2" style="margin-bottom:24px;">Spreader Pick Requests</h2>
+        <div class="table-scroll"><table class="data-table" id="requests-table"></table></div>
+      </div>
+
+      <!-- SUBMISSIONS -->
+      <div id="admin-submissions" class="admin-tab-content" style="display:none;">
+        <h2 class="t-h2" style="margin-bottom:24px;">Post Submissions &amp; Payouts</h2>
+        <div class="table-scroll"><table class="data-table" id="submissions-table"></table></div>
+      </div>
+    </main>
+  </div>
+</section>
+
+<script>
+// ══════════════════════════════════════════════════════════
+// CURSOR
+// ══════════════════════════════════════════════════════════
+const cursor = document.getElementById('cursor');
+const cursorRing = document.getElementById('cursor-ring');
+let cx=0,cy=0,rx=0,ry=0;
+document.addEventListener('mousemove',e=>{cx=e.clientX;cy=e.clientY;cursor.style.left=cx+'px';cursor.style.top=cy+'px';});
+(function animRing(){rx+=(cx-rx)*0.12;ry+=(cy-ry)*0.12;cursorRing.style.left=rx+'px';cursorRing.style.top=ry+'px';requestAnimationFrame(animRing);})();
+document.querySelectorAll('button,a,.btn,.role-card,.glass-card,.chip,.tab-btn,.accordion-trigger,.sidebar-nav-item,.dropdown-item,.avatar-btn,.qdot,.otp-input,.form-input,.form-select,.form-textarea').forEach(el=>{
+  el.addEventListener('mouseenter',()=>{cursor.style.width='18px';cursor.style.height='18px';cursorRing.style.width='52px';cursorRing.style.height='52px';});
+  el.addEventListener('mouseleave',()=>{cursor.style.width='10px';cursor.style.height='10px';cursorRing.style.width='36px';cursorRing.style.height='36px';});
+});
+
+// ══════════════════════════════════════════════════════════
+// PARTICLES CANVAS
+// ══════════════════════════════════════════════════════════
+(function initParticles(){
+  const canvas=document.getElementById('particles-canvas');
+  const ctx=canvas.getContext('2d');
+  let W,H,particles=[];
+  function resize(){W=canvas.width=window.innerWidth;H=canvas.height=window.innerHeight;}
+  resize();window.addEventListener('resize',resize);
+  class Particle{constructor(){this.reset();}reset(){this.x=Math.random()*W;this.y=Math.random()*H;this.size=Math.random()*1.5+0.5;this.speed=Math.random()*0.3+0.1;this.angle=Math.random()*Math.PI*2;this.alpha=Math.random()*0.35+0.05;this.drift=Math.random()*0.008-0.004;}tick(){this.angle+=this.drift;this.x+=Math.cos(this.angle)*this.speed;this.y+=Math.sin(this.angle)*this.speed;if(this.x<-10||this.x>W+10||this.y<-10||this.y>H+10)this.reset();}draw(){ctx.beginPath();ctx.arc(this.x,this.y,this.size,0,Math.PI*2);ctx.fillStyle=`rgba(201,168,76,${this.alpha})`;ctx.fill();}}
+  for(let i=0;i<55;i++)particles.push(new Particle());
+  function loop(){ctx.clearRect(0,0,W,H);particles.forEach(p=>{p.tick();p.draw();});requestAnimationFrame(loop);}
+  loop();
+})();
+
+// ══════════════════════════════════════════════════════════
+// NAV SCROLL EFFECT
+// ══════════════════════════════════════════════════════════
+window.addEventListener('scroll',()=>{
+  const nav=document.getElementById('main-nav');
+  if(window.scrollY>40)nav.classList.add('scrolled');else nav.classList.remove('scrolled');
+});
+
+// ══════════════════════════════════════════════════════════
+// ROUTING
+// ══════════════════════════════════════════════════════════
+const authState={role:null};
+function navigate(id){
+  document.querySelectorAll('.page-section').forEach(s=>{s.classList.remove('active');s.style.display='none';});
+  const target=document.getElementById('s-'+id);
+  if(target){target.classList.add('active');target.style.display='block';window.scrollTo({top:0,behavior:'smooth'});}
+  window.location.hash=id;
+  // Show/hide nav
+  const hiddenNavPages=['client-dashboard','client-new','spreader-dashboard','admin'];
+  const nav=document.getElementById('main-nav');
+  nav.style.display=hiddenNavPages.includes(id)?'none':'block';
+  // Init page-specific stuff
+  if(id==='client-dashboard')initClientDashboard();
+  if(id==='spreader-dashboard')initSpreaderDashboard();
+  if(id==='admin')initAdmin();
+  initCounters();initScrollReveal();
+}
+window.onhashchange=()=>{
+  const h=location.hash.replace('#','');
+  if(h)navigate(h);
+};
+window.onload=()=>{
+  const h=location.hash.replace('#','');
+  navigate(h||'home');
+  initQuoteCarousel();
+};
+function scrollToSection(id){
+  const el=document.getElementById(id);
+  if(el)el.scrollIntoView({behavior:'smooth'});
+}
+
+// ══════════════════════════════════════════════════════════
+// MOBILE MENU
+// ══════════════════════════════════════════════════════════
+function toggleMobileMenu(){document.getElementById('mobile-menu').classList.toggle('open');}
+
+// ══════════════════════════════════════════════════════════
+// MODAL
+// ══════════════════════════════════════════════════════════
+function openModal(content){document.getElementById('modal-content').innerHTML=content;document.getElementById('modal-overlay').classList.add('open');}
+function closeModal(){document.getElementById('modal-overlay').classList.remove('open');}
+document.getElementById('modal-overlay').addEventListener('click',e=>{if(e.target===document.getElementById('modal-overlay'))closeModal();});
+function openAgreementModal(){
+  openModal(`<h2 class="t-h2" style="margin-bottom:20px;">Platform Terms</h2>
+  <p class="t-body" style="margin-bottom:16px;">By using SpreadEm, you agree to the following terms:</p>
+  <div style="display:flex;flex-direction:column;gap:16px;max-height:360px;overflow-y:auto;">
+  <div><h4 class="t-h4 t-gold" style="margin-bottom:6px;">1. Content Standards</h4><p class="t-small">All campaign content must comply with Indian laws and platform community guidelines. SpreadEm reserves the right to reject any content without explanation.</p></div>
+  <div><h4 class="t-h4 t-gold" style="margin-bottom:6px;">2. Payment & Escrow</h4><p class="t-small">Campaign budgets are held in escrow and only released after verified posts. No refunds for campaigns already live.</p></div>
+  <div><h4 class="t-h4 t-gold" style="margin-bottom:6px;">3. Spreader Conduct</h4><p class="t-small">Spreaders must post authentically and submit real post links. Fraudulent submissions result in immediate removal and forfeiture of payouts.</p></div>
+  <div><h4 class="t-h4 t-gold" style="margin-bottom:6px;">4. Privacy</h4><p class="t-small">Client and spreader contact details are never shared with each other. All communication flows through SpreadEm.</p></div>
+  <div><h4 class="t-h4 t-gold" style="margin-bottom:6px;">5. Payouts</h4><p class="t-small">Spreader payouts are processed within 48 hours of post verification. SpreadEm is not liable for UPI transfer delays from banking partners.</p></div>
+  </div>
+  <button class="btn btn-primary btn-full" style="margin-top:24px;" onclick="closeModal()">I Understand →</button>`);
+}
+
+// ══════════════════════════════════════════════════════════
+// DROPDOWN
+// ══════════════════════════════════════════════════════════
+function toggleDropdown(id){
+  const dd=document.getElementById(id);
+  dd.classList.toggle('open');
+}
+document.addEventListener('click',e=>{
+  if(!e.target.closest('.dropdown'))document.querySelectorAll('.dropdown-menu').forEach(d=>d.classList.remove('open'));
+});
+
+// ══════════════════════════════════════════════════════════
+// TOAST
+// ══════════════════════════════════════════════════════════
+function toast(msg,type='info'){
+  const icons={success:`<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>`,error:`<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>`,info:`<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>`};
+  const t=document.createElement('div');
+  t.className=`toast ${type}`;
+  t.innerHTML=`<div class="toast-icon">${icons[type]||icons.info}</div><p>${msg}</p>`;
+  document.getElementById('toast-container').appendChild(t);
+  setTimeout(()=>{t.classList.add('fadeout');setTimeout(()=>t.remove(),350);},3500);
+}
+
+// ══════════════════════════════════════════════════════════
+// SCROLL REVEAL
+// ══════════════════════════════════════════════════════════
+function initScrollReveal(){
+  const obs=new IntersectionObserver(entries=>{entries.forEach(e=>{if(e.isIntersecting)e.target.classList.add('visible');});},{threshold:0.12});
+  document.querySelectorAll('.reveal').forEach(el=>obs.observe(el));
+}
+
+// ══════════════════════════════════════════════════════════
+// ANIMATED COUNTERS
+// ══════════════════════════════════════════════════════════
+function initCounters(){
+  const obs=new IntersectionObserver(entries=>{
+    entries.forEach(e=>{
+      if(e.isIntersecting&&!e.target.dataset.counted){
+        e.target.dataset.counted='1';
+        const target=parseInt(e.target.dataset.target);
+        const suffix=e.target.dataset.suffix||'';
+        if(!target)return;
+        let current=0;const dur=1600;const step=dur/60;
+        const inc=target/60;
+        const timer=setInterval(()=>{current=Math.min(current+inc,target);
+          e.target.textContent=Math.floor(current)+(current>=target?suffix:'');
+          if(current>=target)clearInterval(timer);},step);
+      }
+    });
+  },{threshold:0.5});
+  document.querySelectorAll('[data-target]').forEach(el=>obs.observe(el));
+}
+
+// ══════════════════════════════════════════════════════════
+// QUOTE CAROUSEL
+// ══════════════════════════════════════════════════════════
+let currentQuote=0;const totalQuotes=20;let quoteTimer;let quotePaused=false;
+function initQuoteCarousel(){
+  // Build dots
+  const dotsEl=document.getElementById('quote-dots');
+  if(!dotsEl)return;
+  dotsEl.innerHTML='';
+  for(let i=0;i<totalQuotes;i++){
+    const d=document.createElement('div');
+    d.className='qdot'+(i===0?' active':'');
+    d.onclick=()=>goToQuote(i);
+    dotsEl.appendChild(d);
+  }
+  // Keyboard
+  document.addEventListener('keydown',e=>{if(e.key==='ArrowLeft')prevQuote();if(e.key==='ArrowRight')nextQuote();});
+  // Hover pause
+  const section=document.getElementById('quotes-section');
+  if(section){section.addEventListener('mouseenter',()=>quotePaused=true);section.addEventListener('mouseleave',()=>quotePaused=false);}
+  startQuoteTimer();
+}
+function startQuoteTimer(){
+  clearInterval(quoteTimer);
+  const fill=document.getElementById('quote-fill');
+  if(fill){fill.style.transition='none';fill.style.width='0%';setTimeout(()=>{fill.style.transition='width 4s linear';fill.style.width='100%';},50);}
+  quoteTimer=setInterval(()=>{if(!quotePaused)nextQuote();},4000);
+}
+function goToQuote(n){
+  document.querySelectorAll('.quote-slide').forEach((s,i)=>{s.classList.toggle('active',i===n);});
+  document.querySelectorAll('.qdot').forEach((d,i)=>{d.classList.toggle('active',i===n);});
+  currentQuote=n;
+  const counter=document.getElementById('quote-counter');
+  if(counter)counter.textContent=String(n+1).padStart(2,'0')+' / '+String(totalQuotes).padStart(2,'0');
+  startQuoteTimer();
+}
+function nextQuote(){goToQuote((currentQuote+1)%totalQuotes);}
+function prevQuote(){goToQuote((currentQuote-1+totalQuotes)%totalQuotes);}
+
+// ══════════════════════════════════════════════════════════
+// ACCORDION
+// ══════════════════════════════════════════════════════════
+function toggleAccordion(btn){
+  const body=btn.nextElementSibling;
+  btn.classList.toggle('open');
+  body.classList.toggle('open');
+}
+
+// ══════════════════════════════════════════════════════════
+// TABS
+// ══════════════════════════════════════════════════════════
+function switchTab(btn,targetId){
+  const parent=btn.closest('.tab-bar').parentElement;
+  btn.closest('.tab-bar').querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  parent.querySelectorAll('.tab-content').forEach(t=>{t.classList.remove('active');t.style.display='none';});
+  const target=document.getElementById(targetId);
+  if(target){target.classList.add('active');target.style.display='block';}
+}
+
+// ══════════════════════════════════════════════════════════
+// CHECKBOX
+// ══════════════════════════════════════════════════════════
+function toggleCheck(id){document.getElementById(id).classList.toggle('checked');}
+
+// ══════════════════════════════════════════════════════════
+// CHIPS
+// ══════════════════════════════════════════════════════════
+function toggleChip(el){el.classList.toggle('selected');}
+
+// ══════════════════════════════════════════════════════════
+// SIGNUP FLOWS
+// ══════════════════════════════════════════════════════════
+function showSignupForm(role){
+  document.getElementById('role-picker').style.display='none';
+  document.getElementById('signup-client-form').style.display=(role==='client')?'block':'none';
+  document.getElementById('signup-spreader-form').style.display=(role==='spreader')?'block':'none';
+}
+function showRolePicker(){
+  document.getElementById('role-picker').style.display='block';
+  document.getElementById('signup-client-form').style.display='none';
+  document.getElementById('signup-spreader-form').style.display='none';
+}
+function submitClientSignup(){
+  const name=document.getElementById('c-name').value;
+  const agreed=document.getElementById('c-agree').classList.contains('checked');
+  if(!name){toast('Please fill in your full name.','error');return;}
+  if(!agreed){toast('Please agree to the platform terms.','error');return;}
+  toast('Account created! We\'ll WhatsApp you within 24 hours.','success');
+  setTimeout(()=>navigate('login'),1800);
+}
+function submitSpreaderSignup(){
+  const name=document.getElementById('s-name').value;
+  const agreed=document.getElementById('s-agree').classList.contains('checked');
+  if(!name){toast('Please fill in your full name.','error');return;}
+  if(!agreed){toast('Please agree to the platform terms.','error');return;}
+  toast('Application submitted! Expect a WhatsApp from us within 48 hrs.','success');
+  setTimeout(()=>navigate('login'),1800);
+}
+
+// ══════════════════════════════════════════════════════════
+// LOGIN / OTP
+// ══════════════════════════════════════════════════════════
+function sendOTP(){
+  const email=document.getElementById('login-email').value;
+  if(!email||!email.includes('@')){toast('Enter a valid email address.','error');return;}
+  document.getElementById('otp-email-display').textContent=email;
+  document.getElementById('login-email-step').style.display='none';
+  document.getElementById('login-otp-step').style.display='block';
+  toast('OTP sent to '+email,'info');
+}
+function showEmailStep(){
+  document.getElementById('login-email-step').style.display='block';
+  document.getElementById('login-otp-step').style.display='none';
+}
+function otpNext(el,idx){
+  if(el.value.length===1){
+    const inputs=document.querySelectorAll('.otp-input');
+    if(idx<5)inputs[idx+1].focus();
+  }
+}
+function verifyOTP(){
+  const inputs=document.querySelectorAll('.otp-input');
+  const otp=Array.from(inputs).map(i=>i.value).join('');
+  if(otp.length<6){toast('Please enter the full 6-digit code.','error');return;}
+  toast('Logged in successfully!','success');
+  setTimeout(()=>navigate('client-dashboard'),1000);
+}
+function demoLogin(role){
+  authState.role=role;
+  toast('Logged in as demo '+role,'success');
+  setTimeout(()=>{
+    if(role==='client')navigate('client-dashboard');
+    else if(role==='spreader')navigate('spreader-dashboard');
+    else if(role==='admin')navigate('admin');
+  },600);
+}
+
+// ══════════════════════════════════════════════════════════
+// DUMMY DATA
+// ══════════════════════════════════════════════════════════
+const CAMPAIGNS=[
+  {id:'c1',title:'Zepto Diwali Rush',brand:'Zepto',status:'live',spreaders:28,posts:22,goal:40,budget:25000,niche:'Food',lang:'Hindi'},
+  {id:'c2',title:'Swiggy Late Night',brand:'Swiggy',status:'live',spreaders:14,posts:11,goal:20,budget:12000,niche:'Memes',lang:'Tamil'},
+  {id:'c3',title:'Groww Investing 101',brand:'Groww',status:'approved_waiting_payment',spreaders:0,posts:0,goal:30,budget:18000,niche:'Finance',lang:'English'},
+  {id:'c4',title:'boAt Bassheads Launch',brand:'boAt',status:'submitted',spreaders:0,posts:0,goal:50,budget:35000,niche:'Tech',lang:'Hindi'},
+  {id:'c5',title:'Nykaa Summer Glow',brand:'Nykaa',status:'completed',spreaders:45,posts:43,goal:45,budget:28000,niche:'Fashion',lang:'English'},
+];
+const SPREADERS_PENDING=[
+  {name:'Rohit Memes',ig:'@rohitmemes_tn',wa:'+91 98765 00001',niche:'Memes',lang:'Tamil',followers:'20K–100K',submitted:'3 Jan 2026'},
+  {name:'Finance Bhai',ig:'@financebhai',wa:'+91 98765 00002',niche:'Finance',lang:'Hindi',followers:'5K–20K',submitted:'4 Jan 2026'},
+  {name:'Chennai Comedy',ig:'@chennaicomedy',wa:'+91 98765 00003',niche:'Memes',lang:'Tamil',followers:'100K+',submitted:'5 Jan 2026'},
+  {name:'Tech Tamil',ig:'@techtamil_',wa:'+91 98765 00004',niche:'Tech',lang:'Tamil',followers:'20K–100K',submitted:'6 Jan 2026'},
+];
+const SPREADERS_APPROVED=[
+  {name:'Kavya Reddy',ig:'@kavyamemes',wa:'+91 98765 11001',niche:'Bollywood',lang:'Hindi',followers:'20K–100K',joined:'1 Dec 2025'},
+  {name:'Ajay Nair',ig:'@ajaynair_cr',wa:'+91 98765 11002',niche:'Cricket',lang:'Malayalam',followers:'5K–20K',joined:'15 Nov 2025'},
+];
+const CLIENTS_DATA=[
+  {name:'Arjun Mehta',brand:'Zepto',wa:'+91 99999 00001',ig:'@zepto',category:'Food',submitted:'1 Jan 2026',status:'approved'},
+  {name:'Priya S',brand:'Nykaa',wa:'+91 99999 00002',ig:'@nykaa',category:'Fashion',submitted:'2 Jan 2026',status:'approved'},
+  {name:'Ravi Kumar',brand:'StartupXYZ',wa:'+91 99999 00003',ig:'@startupxyz',category:'Tech',submitted:'6 Jan 2026',status:'pending'},
+];
+const REQUESTS_DATA=[
+  {spreader:'Kavya Reddy',campaign:'Zepto Diwali Rush',requested:'4 Jan 2026',status:'approved'},
+  {spreader:'Rohit Memes',campaign:'Swiggy Late Night',requested:'5 Jan 2026',status:'requested'},
+  {spreader:'Ajay Nair',campaign:'Groww Investing 101',requested:'6 Jan 2026',status:'requested'},
+];
+const SUBMISSIONS_DATA=[
+  {spreader:'Kavya Reddy',campaign:'Zepto Diwali Rush',url:'instagram.com/p/abc123',submitted:'6 Jan 2026',status:'verified',payout:'₹2,200'},
+  {spreader:'Ajay Nair',campaign:'Swiggy Late Night',url:'instagram.com/p/def456',submitted:'7 Jan 2026',status:'posted',payout:'₹1,000'},
+  {spreader:'Rohit Memes',campaign:'Zepto Diwali Rush',url:'instagram.com/p/ghi789',submitted:'7 Jan 2026',status:'paid',payout:'₹3,500'},
+];
+const ACTIVITY=[
+  {actor:'Admin',action:'Approved spreader @kavyamemes',time:'2 hours ago'},
+  {actor:'Zepto',action:'Submitted new campaign "Zepto Diwali Rush"',time:'4 hours ago'},
+  {actor:'Admin',action:'Marked post by @ajay_nair as verified',time:'6 hours ago'},
+  {actor:'Groww',action:'Campaign "Groww Investing 101" awaiting payment',time:'8 hours ago'},
+  {actor:'Admin',action:'Approved client Priya S (Nykaa)',time:'1 day ago'},
+];
+
+// ══════════════════════════════════════════════════════════
+// STATUS HELPERS
+// ══════════════════════════════════════════════════════════
+function statusPill(status){
+  const map={
+    draft:`<span class="pill pill-gray">Draft</span>`,
+    submitted:`<span class="pill pill-yellow">In Review</span>`,
+    approved_waiting_payment:`<span class="pill pill-orange pulse-dot">Awaiting Payment</span>`,
+    live:`<span class="pill pill-green pulse-dot">Live</span>`,
+    paused:`<span class="pill pill-yellow">Paused</span>`,
+    completed:`<span class="pill pill-gold">Completed</span>`,
+    cancelled:`<span class="pill pill-red">Cancelled</span>`,
+    approved:`<span class="pill pill-green">Active</span>`,
+    pending:`<span class="pill pill-yellow">Under Review</span>`,
+    requested:`<span class="pill pill-yellow">Requested</span>`,
+    posted:`<span class="pill pill-green">Posted ✓</span>`,
+    verified:`<span class="pill pill-blue">Verified</span>`,
+    paid:`<span class="pill pill-green">Paid ₹</span>`,
+  };
+  return map[status]||`<span class="pill pill-gray">${status}</span>`;
+}
+
+// ══════════════════════════════════════════════════════════
+// CLIENT DASHBOARD
+// ══════════════════════════════════════════════════════════
+function initClientDashboard(){
+  const list=document.getElementById('campaigns-list');
+  const liveList=document.getElementById('campaigns-live-list');
+  if(!list)return;
+  list.innerHTML='';liveList.innerHTML='';
+  CAMPAIGNS.forEach(c=>{
+    const pct=Math.round((c.posts/c.goal)*100);
+    const card=`<div class="campaign-card">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:16px;">
+        <div>
+          <h3 class="t-h3" style="margin-bottom:6px;">${c.title}</h3>
+          <span class="pill pill-gold" style="font-size:11px;">${c.brand}</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;">${statusPill(c.status)}<span class="t-small t-gold">₹${(c.budget/1000).toFixed(0)}K</span></div>
+      </div>
+      <div style="display:flex;gap:20px;flex-wrap:wrap;margin-bottom:14px;">
+        <span class="t-small t-muted"><span style="color:var(--cream);">${c.spreaders}</span> spreaders</span>
+        <span class="t-small t-muted"><span style="color:var(--cream);">${c.posts}</span>/<span>${c.goal}</span> posts</span>
+        <span class="pill" style="font-size:11px;background:rgba(0,212,200,0.08);color:var(--aqua);">${c.niche}</span>
+        <span class="pill" style="font-size:11px;">${c.lang}</span>
+      </div>
+      <div class="prog-bar"><div class="prog-fill" style="width:${pct}%;"></div></div>
+      <div style="display:flex;justify-content:space-between;margin-top:8px;"><span class="t-micro">${pct}% complete</span><span class="t-micro">${c.posts} of ${c.goal} posts</span></div>
+    </div>`;
+    list.insertAdjacentHTML('beforeend',card);
+    if(c.status==='live')liveList.insertAdjacentHTML('beforeend',card);
+  });
+}
+
+// ══════════════════════════════════════════════════════════
+// MULTI-STEP FORM
+// ══════════════════════════════════════════════════════════
+let currentStep=1;
+function goStep(n){
+  if(n===2&&!document.getElementById('nc-title').value){toast('Please enter a campaign title.','error');return;}
+  document.querySelectorAll('.form-step').forEach((s,i)=>s.classList.toggle('active',i===n-1));
+  [1,2,3].forEach(i=>{
+    const sc=document.getElementById('sc'+i);
+    const sl=document.getElementById('sl'+i);
+    const line=document.getElementById('sline'+i);
+    if(sc){sc.className='step-circle '+(i<n?'done':i===n?'active':'pending');}
+    if(sl){sl.className='step-label '+(i===n?'active':'');}
+    if(line)line.className='step-line '+(i<n?'done':'');
+  });
+  currentStep=n;
+  if(n===3){
+    document.getElementById('sum-title').textContent=document.getElementById('nc-title').value||'—';
+    const url=document.getElementById('nc-url').value;
+    document.getElementById('sum-url').textContent=url?url.substring(0,35)+'…':'—';
+    const bv=document.getElementById('nc-budget').value;
+    document.getElementById('sum-budget').textContent=bv?'₹'+parseInt(bv).toLocaleString():'—';
+  }
+}
+function selectGoal(el,goal){
+  el.closest('.form-group').querySelectorAll('.glass-card').forEach(c=>{c.style.borderColor='var(--border)';c.style.boxShadow='none';});
+  el.style.borderColor='rgba(201,168,76,0.4)';el.style.boxShadow='0 0 20px var(--gold-d)';
+}
+function updateCharCount(el,counterId,min,max){
+  const len=el.value.length;
+  document.getElementById(counterId).textContent=len+' / '+max;
+  el.classList.toggle('error',len>0&&len<min);
+}
+function updateBudgetDisplay(el){
+  const v=parseInt(el.value)||5000;
+  document.getElementById('nc-slider').value=v;
+  const posts=Math.round(v/1200);
+  document.getElementById('budget-estimate').textContent=`Estimated reach: ${posts}–${Math.round(posts*1.6)} page posts at this budget`;
+}
+function syncBudgetSlider(el){
+  document.getElementById('nc-budget').value=el.value;
+  updateBudgetDisplay({value:el.value});
+}
+function triggerFileUpload(){document.getElementById('file-input').click();}
+function handleFileUpload(el){
+  if(el.files[0]){document.getElementById('file-name').textContent=el.files[0].name;document.getElementById('file-preview').style.display='flex';}}
+function submitCampaign(){
+  const a1=document.getElementById('nc-agree1').classList.contains('checked');
+  const a2=document.getElementById('nc-agree2').classList.contains('checked');
+  if(!a1||!a2){toast('Please agree to both terms.','error');return;}
+  toast('Campaign submitted! You\'ll hear from us on WhatsApp.','success');
+  setTimeout(()=>navigate('client-dashboard'),1600);
+}
+
+// ══════════════════════════════════════════════════════════
+// SPREADER DASHBOARD
+// ══════════════════════════════════════════════════════════
+function initSpreaderDashboard(){
+  const grid=document.getElementById('spreader-campaigns-grid');
+  const subList=document.getElementById('spreader-submissions-list');
+  if(!grid)return;
+  grid.innerHTML='';subList.innerHTML='';
+  const liveCamps=CAMPAIGNS.filter(c=>c.status==='live');
+  liveCamps.forEach((c,idx)=>{
+    const payout=Math.floor(800+Math.random()*2200);
+    const slots=Math.floor(Math.random()*8)+1;
+    const urgent=slots<3;
+    const card=`<div class="spreader-card ${urgent?'urgent':''}">
+      ${urgent?'<div class="t-micro" style="color:var(--vermillion);margin-bottom:10px;">⚡ Only ${slots} slots left!</div>':''}
+      <div style="display:flex;gap:8px;margin-bottom:12px;">
+        <span class="pill pill-gold" style="font-size:11px;">${c.niche}</span>
+        <span class="pill pill-blue" style="font-size:11px;">${c.lang}</span>
+      </div>
+      <h3 class="t-h3" style="margin-bottom:8px;">${c.title}</h3>
+      <p class="t-small" style="margin-bottom:16px;">Premium campaign looking for authentic spreaders in the ${c.niche.toLowerCase()} niche.</p>
+      <div style="display:flex;gap:16px;margin-bottom:16px;">
+        <span class="t-small t-muted">Spreaders: <span style="color:var(--cream);">${c.spreaders}</span></span>
+        <span class="t-small t-muted">Slots left: <span style="color:${urgent?'var(--vermillion)':'var(--cream)'};">${slots}</span></span>
+      </div>
+      <div class="payout-badge" style="margin-bottom:16px;">
+        <div class="t-micro" style="color:var(--success);">Earn</div>
+        <div class="payout-amount">₹${payout.toLocaleString()}</div>
+      </div>
+      <button class="btn btn-primary btn-full btn-sm" onclick="requestToPost('${c.id}','${c.title}')">Request to Post →</button>
+    </div>`;
+    grid.insertAdjacentHTML('beforeend',card);
+  });
+  SUBMISSIONS_DATA.forEach(s=>{
+    const item=`<div class="campaign-card">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:12px;">
+        <div>
+          <h4 class="t-h4">${s.campaign}</h4>
+          <span class="t-small t-muted">Submitted ${s.submitted}</span>
+        </div>
+        ${statusPill(s.status)}
+      </div>
+      ${s.status==='approved'?`<div style="display:flex;gap:10px;margin-top:10px;"><input type="url" class="form-input" placeholder="https://instagram.com/p/..." style="font-size:13px;"><button class="btn btn-primary btn-sm">Submit Post</button></div>`:''}
+      ${s.status==='paid'||s.status==='verified'?`<div class="payout-badge" style="margin-top:10px;display:inline-flex;align-items:center;gap:10px;padding:10px 16px;"><span class="t-small t-gold">Payout: ${s.payout}</span></div>`:''}
+    </div>`;
+    subList.insertAdjacentHTML('beforeend',item);
+  });
+}
+function requestToPost(id,title){
+  toast(`Request sent for "${title}"! Check your WhatsApp.`,'success');
+}
+
+// ══════════════════════════════════════════════════════════
+// ADMIN PANEL
+// ══════════════════════════════════════════════════════════
+function initAdmin(){buildAdminTables();}
+function showAdminTab(tab){
+  document.querySelectorAll('.admin-tab-content').forEach(t=>t.style.display='none');
+  document.getElementById('admin-'+tab).style.display='block';
+  document.querySelectorAll('.sidebar-nav-item').forEach(n=>n.classList.remove('active'));
+  document.getElementById('aside-'+tab).classList.add('active');
+}
+function buildAdminTables(){
+  // Activity feed
+  const feed=document.getElementById('activity-feed');
+  if(feed){feed.innerHTML='';ACTIVITY.forEach(a=>{feed.insertAdjacentHTML('beforeend',`
+    <div style="display:flex;align-items:flex-start;gap:14px;padding:14px 0;border-bottom:1px solid var(--border);">
+      <div style="width:36px;height:36px;border-radius:50%;background:var(--gold-d);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:11px;font-weight:700;color:var(--gold);">${a.actor[0]}</div>
+      <div><p style="font-size:14px;color:var(--cream);">${a.action}</p><p class="t-micro" style="margin-top:3px;">${a.time}</p></div>
+    </div>`);});}
+
+  // Spreaders pending table
+  const st=document.getElementById('spreaders-table');
+  if(st){st.innerHTML=`<thead><tr><th>Name</th><th>WhatsApp</th><th>Instagram</th><th>Niche</th><th>Language</th><th>Followers</th><th>Submitted</th><th>Actions</th></tr></thead><tbody>`+
+    SPREADERS_PENDING.map(s=>`<tr><td style="color:var(--cream);">${s.name}</td><td>${s.wa}</td><td>${s.ig}</td><td>${s.niche}</td><td>${s.lang}</td><td>${s.followers}</td><td>${s.submitted}</td><td><div style="display:flex;gap:6px;"><button class="btn btn-success btn-sm" onclick="approveSpreader('${s.name}')">Approve</button><button class="btn btn-danger btn-sm">Reject</button></div></td></tr>`).join('')+`</tbody>`;}
+
+  // Spreaders approved
+  const sa=document.getElementById('spreaders-approved-table');
+  if(sa){sa.innerHTML=`<thead><tr><th>Name</th><th>Instagram</th><th>Niche</th><th>Language</th><th>Followers</th><th>Joined</th><th>Status</th></tr></thead><tbody>`+
+    SPREADERS_APPROVED.map(s=>`<tr><td style="color:var(--cream);">${s.name}</td><td>${s.ig}</td><td>${s.niche}</td><td>${s.lang}</td><td>${s.followers}</td><td>${s.joined}</td><td>${statusPill('approved')}</td></tr>`).join('')+`</tbody>`;}
+
+  // Clients
+  const ct=document.getElementById('clients-table');
+  if(ct){ct.innerHTML=`<thead><tr><th>Name</th><th>Brand</th><th>WhatsApp</th><th>Instagram</th><th>Category</th><th>Submitted</th><th>Status</th><th>Actions</th></tr></thead><tbody>`+
+    CLIENTS_DATA.map(c=>`<tr><td style="color:var(--cream);">${c.name}</td><td>${c.brand}</td><td>${c.wa}</td><td>${c.ig}</td><td>${c.category}</td><td>${c.submitted}</td><td>${statusPill(c.status)}</td><td>${c.status==='pending'?`<div style="display:flex;gap:6px;"><button class="btn btn-success btn-sm" onclick="approveClient('${c.name}')">Approve</button><button class="btn btn-danger btn-sm">Reject</button></div>`:'<span class="t-micro">—</span>'}</td></tr>`).join('')+`</tbody>`;}
+
+  // Campaigns admin
+  const ac=document.getElementById('admin-campaigns-table');
+  if(ac){ac.innerHTML=`<thead><tr><th>Title</th><th>Brand</th><th>Budget</th><th>Niche</th><th>Status</th><th>Spreaders</th><th>Posts</th><th>Actions</th></tr></thead><tbody>`+
+    CAMPAIGNS.map(c=>`<tr><td style="color:var(--cream);">${c.title}</td><td>${c.brand}</td><td>₹${c.budget.toLocaleString()}</td><td>${c.niche}</td><td>${statusPill(c.status)}</td><td>${c.spreaders}</td><td>${c.posts}/${c.goal}</td><td><div style="display:flex;gap:6px;"><button class="btn btn-ghost btn-sm">View</button>${c.status==='submitted'?`<button class="btn btn-success btn-sm" onclick="approveCampaign('${c.title}')">Approve</button>`:''}</div></td></tr>`).join('')+`</tbody>`;}
+
+  // Requests
+  const rt=document.getElementById('requests-table');
+  if(rt){rt.innerHTML=`<thead><tr><th>Spreader</th><th>Campaign</th><th>Requested</th><th>Status</th><th>Actions</th></tr></thead><tbody>`+
+    REQUESTS_DATA.map(r=>`<tr><td style="color:var(--cream);">${r.spreader}</td><td>${r.campaign}</td><td>${r.requested}</td><td>${statusPill(r.status)}</td><td>${r.status==='requested'?`<div style="display:flex;gap:6px;"><button class="btn btn-success btn-sm" onclick="approveRequest('${r.spreader}')">Approve Pick</button><button class="btn btn-danger btn-sm">Reject</button></div>`:'<span class="t-micro">—</span>'}</td></tr>`).join('')+`</tbody>`;}
+
+  // Submissions
+  const sbt=document.getElementById('submissions-table');
+  if(sbt){sbt.innerHTML=`<thead><tr><th>Spreader</th><th>Campaign</th><th>Post URL</th><th>Submitted</th><th>Status</th><th>Payout</th><th>Actions</th></tr></thead><tbody>`+
+    SUBMISSIONS_DATA.map(s=>`<tr><td style="color:var(--cream);">${s.spreader}</td><td>${s.campaign}</td><td><a href="#" style="color:var(--gold);font-size:13px;" onclick="toast('Opening post...','info');return false;">${s.url}</a></td><td>${s.submitted}</td><td>${statusPill(s.status)}</td><td style="color:var(--success);">${s.payout}</td><td><div style="display:flex;gap:6px;">${s.status==='posted'?`<button class="btn btn-success btn-sm" onclick="verifyPost('${s.spreader}')">Verify</button>`:''} ${s.status==='verified'?`<button class="btn btn-primary btn-sm" onclick="markPaid('${s.spreader}')">Mark Paid ₹</button>`:''}</div></td></tr>`).join('')+`</tbody>`;}
+}
+function approveSpreader(name){toast(name+' approved! WhatsApp notification sent.','success');}
+function approveClient(name){toast(name+' approved! WhatsApp notification sent.','success');}
+function approveCampaign(title){toast('"'+title+'" approved. Payment link sent via WhatsApp.','success');}
+function approveRequest(spreader){toast(spreader+' approved to post. WhatsApp notification sent.','success');}
+function verifyPost(spreader){toast(spreader+'\'s post verified. Ready for payout.','success');}
+function markPaid(spreader){toast('₹ Payout marked for '+spreader+'. UPI transfer initiated.','success');}
+</script>
+</body>
+</html>
